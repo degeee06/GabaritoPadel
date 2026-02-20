@@ -52,7 +52,6 @@ const RESPONSE_SCHEMA: Schema = {
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    // Return mock data if no API key is present (for dev/demo purposes if needed, though we should throw)
     console.warn("No API Key found, using mock data for demo.");
     return {
       summary: "Estratégia simulada: Foque no jogador de revés que tem problemas com bolas altas.",
@@ -75,13 +74,31 @@ ${input.myTeamDescription}
 Adversários:
 ${input.opponentsDescription}
 
-Gere um plano tático vencedor.
+${input.image ? `ATENÇÃO: Uma imagem foi anexada. Você DEVE analisá-la minuciosamente.
+Procure por:
+1. Falhas de posicionamento (ex: buracos no meio, jogador muito colado na grade, distância entre os parceiros).
+2. Postura e empunhadura (ex: peso nos calcanhares, raquete baixa na rede, preparação atrasada).
+3. Condições da quadra (ex: vidros úmidos, tipo de grama, iluminação).
+Cruze essas informações visuais com as descrições em texto para fornecer dicas EXTREMAMENTE ESPECÍFICAS. Evite dicas genéricas como "jogue no espaço vazio". Diga exatamente ONDE e COMO jogar com base no que você vê na imagem.` : ""}
+
+Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
   try {
+    const parts: any[] = [{ text: prompt }];
+    
+    if (input.image) {
+      parts.push({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: input.image.split(',')[1] // Remove data:image/jpeg;base64,
+        }
+      });
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
-      contents: prompt,
+      contents: { parts },
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",

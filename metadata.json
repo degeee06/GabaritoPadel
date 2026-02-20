@@ -1,1 +1,5 @@
-Permission denied
+{
+  "name": "Padel IQ",
+  "description": "Seu técnico de bolso com inteligência artificial",
+  "requestFramePermissions": []
+}

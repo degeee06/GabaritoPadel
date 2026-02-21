@@ -29,6 +29,9 @@ const RESPONSE_SCHEMA = {
 };
 
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
@@ -100,6 +103,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
     // Salvar no Supabase
     try {
       await supabase.from('matches').insert({
+        user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
         image_url: input.image ? "Imagem anexada na análise" : null,
@@ -118,9 +122,13 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
 }
 
 export async function getMatchHistory(): Promise<any[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('matches')
     .select('*')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) {

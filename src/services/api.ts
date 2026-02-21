@@ -98,7 +98,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash-latest",
+      model: "gemini-pro-vision",
       contents: { parts },
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,

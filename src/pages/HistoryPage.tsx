@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Match } from '../types';
-import { deleteMatch } from '../services/api';
+import { deleteMatchById } from '../services/api';
 
 interface HistoryPageProps {
   matches: Match[];
@@ -15,7 +15,7 @@ export function HistoryPage({ matches, onMatchSelect, onNewMatch, onMatchDeleted
     e.stopPropagation(); // Impede que o clique na lixeira selecione a partida
     if (window.confirm('Tem certeza que deseja excluir esta análise?')) {
       try {
-        await deleteMatch(matchId);
+        await deleteMatchById(matchId);
         onMatchDeleted(matchId);
       } catch (error) {
         alert('Erro ao excluir a análise. Tente novamente.');

@@ -10,7 +10,7 @@ export function AuthPage() {
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}
-
+          providers={[]}
           localization={{
             variables: {
               sign_in: {

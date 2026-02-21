@@ -4,16 +4,17 @@ import { HistoryPage } from './pages/HistoryPage';
 import { StrategyForm } from './pages/StrategyForm';
 import { StrategyResult } from './pages/StrategyResult';
 import { AuthPage } from './pages/AuthPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { MatchInput, TacticalPlan, Match } from './types';
 import { generateTacticalPlan, getMatchHistory } from './services/api';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
-type ViewState = 'history' | 'form' | 'result';
+type ViewState = 'dashboard' | 'history' | 'form' | 'result';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [view, setView] = useState<ViewState>('history');
+  const [view, setView] = useState<ViewState>('dashboard');
   const [plan, setPlan] = useState<TacticalPlan | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session) {
+    if (session && view === 'history') {
       const loadHistory = async () => {
         setLoading(true);
         try {
@@ -46,7 +47,7 @@ export default function App() {
       };
       loadHistory();
     }
-  }, [session]);
+  }, [session, view]);
 
   const handleFormSubmit = async (input: MatchInput) => {
     setLoading(true);
@@ -70,25 +71,24 @@ export default function App() {
     setView('result');
   };
 
-  const handleBackToHistory = () => {
-    setView('history');
+  const handleNavigation = (targetView: ViewState) => {
+    setView(targetView);
     setPlan(null);
   };
 
   const renderContent = () => {
-    if (loading && view === 'history') {
-      return <div className="text-center text-zinc-400">Carregando histórico...</div>;
-    }
-
     switch (view) {
+      case 'dashboard':
+        return <DashboardPage onStartAnalysis={() => handleNavigation('form')} onViewHistory={() => handleNavigation('history')} />;
       case 'history':
-        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => setView('form')} />;
+        if (loading) return <div className="text-center text-zinc-400">Carregando histórico...</div>;
+        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => handleNavigation('form')} />;
       case 'form':
-        return <StrategyForm onBack={handleBackToHistory} onSubmit={handleFormSubmit} loading={loading} />;
+        return <StrategyForm onBack={() => handleNavigation('dashboard')} onSubmit={handleFormSubmit} loading={loading} />;
       case 'result':
-        return plan ? <StrategyResult plan={plan} onBack={handleBackToHistory} /> : null;
+        return plan ? <StrategyResult plan={plan} onBack={() => handleNavigation('history')} /> : null;
       default:
-        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => setView('form')} />;
+        return <DashboardPage onStartAnalysis={() => handleNavigation('form')} onViewHistory={() => handleNavigation('history')} />;
     }
   };
 

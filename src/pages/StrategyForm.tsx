@@ -1,19 +1,28 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Sparkles, Loader2, Image as ImageIcon, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { MatchInput } from '../types';
 
 interface StrategyFormProps {
   onBack: () => void;
-  onSubmit: (data: MatchInput) => void;
+  onSubmit: (input: MatchInput) => void;
   loading: boolean;
 }
 
 export function StrategyForm({ onBack, onSubmit, loading }: StrategyFormProps) {
-  const [myTeam, setMyTeam] = useState('');
-  const [opponents, setOpponents] = useState('');
+  const [myTeamDescription, setMyTeamDescription] = useState('');
+  const [opponentsDescription, setOpponentsDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!myTeamDescription.trim() || !opponentsDescription.trim()) {
+      alert('Por favor, preencha as descrições das duplas.');
+      return;
+    }
+    onSubmit({ myTeamDescription, opponentsDescription, image: image || undefined });
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -26,115 +35,90 @@ export function StrategyForm({ onBack, onSubmit, loading }: StrategyFormProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit({
-      myTeamDescription: myTeam,
-      opponentsDescription: opponents,
-      image: image || undefined,
-    });
-  };
-
-  const fillExample = () => {
-    setMyTeam("Eu jogo na direita, sou destro, defendo bem mas tenho bandeja fraca. Meu parceiro é canhoto, agressivo e tem smash forte.");
-    setOpponents("Oponente da direita é alto e voleia muito bem. O da esquerda é consistente no fundo mas não sabe sair da parede.");
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4 mb-6">
-        <button 
-          onClick={onBack}
-          className="p-2 -ml-2 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h2 className="text-xl font-bold">Nova Análise</h2>
-      </div>
+      <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+        <ArrowLeft className="w-5 h-5" />
+        Voltar
+      </button>
 
-      <form onSubmit={handleSubmit} className="space-y-6 pb-10">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="text-3xl font-bold text-white">Análise da Partida</h1>
+        <p className="text-zinc-400 mt-1">Descreva os jogadores e anexe uma imagem para uma análise mais precisa.</p>
+      </motion.div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300 ml-1">Sua Dupla</label>
+          <label htmlFor="my-team" className="font-medium text-zinc-300">Minha Dupla</label>
           <textarea
-            value={myTeam}
-            onChange={(e) => setMyTeam(e.target.value)}
-            placeholder="Descreva você e seu parceiro..."
-            className="w-full bg-zinc-800 border-zinc-700 text-white rounded-xl p-4 min-h-[100px] focus:ring-2 focus:ring-lime-400 focus:border-transparent placeholder:text-zinc-600 resize-none"
-            required
+            id="my-team"
+            value={myTeamDescription}
+            onChange={(e) => setMyTeamDescription(e.target.value)}
+            placeholder="Ex: Eu (drive, boa bandeja) e meu parceiro (revés, bom voleio)"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 h-24 focus:ring-2 focus:ring-lime-400 focus:border-lime-400 outline-none transition"
+            disabled={loading}
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300 ml-1">Adversários</label>
+          <label htmlFor="opponents" className="font-medium text-zinc-300">Adversários</label>
           <textarea
-            value={opponents}
-            onChange={(e) => setOpponents(e.target.value)}
-            placeholder="Descreva os oponentes..."
-            className="w-full bg-zinc-800 border-zinc-700 text-white rounded-xl p-4 min-h-[100px] focus:ring-2 focus:ring-lime-400 focus:border-transparent placeholder:text-zinc-600 resize-none"
-            required
+            id="opponents"
+            value={opponentsDescription}
+            onChange={(e) => setOpponentsDescription(e.target.value)}
+            placeholder="Ex: Drive canhoto agressivo, bom smash. Revés defensivo, erra bolas baixas."
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-3 h-24 focus:ring-2 focus:ring-lime-400 focus:border-lime-400 outline-none transition"
+            disabled={loading}
           />
         </div>
 
-        {/* Image Upload Area */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-zinc-300 ml-1">Anexar Imagem (Opcional)</label>
-          {!image ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full aspect-video bg-zinc-800/50 border-2 border-dashed border-zinc-700 rounded-xl flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 hover:border-zinc-500 transition-all"
-            >
-              <ImageIcon className="w-8 h-8" />
-              <span className="text-sm">Foto da quadra ou oponentes</span>
-            </button>
-          ) : (
-            <div className="relative aspect-video rounded-xl overflow-hidden border border-zinc-700">
-              <img src={image} alt="Upload" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={() => setImage(null)}
-                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full shadow-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            accept="image/*"
-            className="hidden"
-          />
-        </div>
-
-        <div className="pt-4 space-y-3">
-          <button
-            type="button"
-            onClick={fillExample}
-            className="w-full py-2 text-sm text-zinc-500 hover:text-zinc-300 font-medium transition-colors"
+          <label className="font-medium text-zinc-300">Análise Visual (Opcional)</label>
+          <div 
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-lime-400 transition"
           >
-            Preencher com exemplo
-          </button>
-
-          <button
-            type="submit"
-            disabled={loading || !myTeam || !opponents}
-            className="w-full bg-lime-400 hover:bg-lime-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-zinc-900 font-bold text-lg py-4 rounded-xl shadow-lg shadow-lime-400/20 disabled:shadow-none transition-all flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Analisando...
-              </>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImageChange} 
+              className="hidden" 
+              accept="image/*" 
+              disabled={loading}
+            />
+            {image ? (
+              <div className="relative">
+                <img src={image} alt="Preview" className="max-h-40 rounded-lg" />
+                <button 
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setImage(null); }}
+                  className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 text-white"
+                  disabled={loading}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <>
-                <Sparkles className="w-5 h-5" />
-                Analisar com IA
+                <ImageIcon className="w-10 h-10 text-zinc-500 mb-2" />
+                <p className="text-zinc-400">Clique para anexar uma imagem</p>
+                <p className="text-xs text-zinc-600">Posicionamento, postura, etc.</p>
               </>
             )}
-          </button>
+          </div>
         </div>
+
+        <button 
+          type="submit" 
+          disabled={loading} 
+          className="w-full bg-lime-400 hover:bg-lime-500 text-zinc-900 font-bold py-4 rounded-lg flex items-center justify-center gap-2 transition-all disabled:bg-zinc-600 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Analisando...</>
+          ) : (
+            'Gerar Estratégia Vencedora'
+          )}
+        </button>
       </form>
     </div>
   );

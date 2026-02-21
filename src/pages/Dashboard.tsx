@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Play, History, ChevronRight, Trophy, Loader2 } from 'lucide-react';
-import { motion } from 'motion/react';
+
+import { useEffect, useState } from 'react';
+import { Play, History, Trophy, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { Match } from '../types';
 
@@ -75,7 +76,6 @@ export function Dashboard({ onStart }: DashboardProps) {
             </div>
           ) : (
             matches.map((game, idx) => {
-              // Extract a short name from opponents description or use a fallback
               const opponentName = game.opponents_description.split('.')[0].substring(0, 30) + "...";
               const date = new Date(game.created_at).toLocaleDateString('pt-BR');
               

@@ -9,16 +9,8 @@ export interface TacticalPlan {
   main_target: string;
   tactical_checklist: string[];
   traps_to_avoid: string[];
-  offensive_strategy: string[]; // Simplified for checklist
-  defensive_strategy: string[]; // Simplified for checklist
-}
-
-export interface MatchHistory {
-  id: string;
-  date: string;
-  opponent: string;
-  result: string;
-  score: string;
+  offensive_strategy: string[];
+  defensive_strategy: string[];
 }
 
 export interface Match {

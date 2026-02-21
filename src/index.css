@@ -1,13 +1,7 @@
-@import "tailwindcss";
-
-@theme {
-  --color-neon-green: #a3e635; /* lime-400 */
-  --color-dark-bg: #18181b; /* zinc-900 */
-  --color-card-bg: #27272a; /* zinc-800 */
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
-  background-color: var(--color-dark-bg);
-  color: #fff;
-  font-family: 'Inter', sans-serif;
+  @apply bg-zinc-900 text-white;
 }

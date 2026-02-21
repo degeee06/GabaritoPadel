@@ -1,5 +1,4 @@
 {
   "name": "Padel IQ",
-  "description": "Seu técnico de bolso com inteligência artificial",
-  "requestFramePermissions": []
+  "description": "An AI-powered padel strategy generator."
 }

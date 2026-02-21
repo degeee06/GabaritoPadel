@@ -1,9 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { StrategyForm } from './pages/StrategyForm';
@@ -30,7 +26,6 @@ export default function App() {
       setView('result');
     } catch (error) {
       console.error("Failed to generate plan", error);
-      // In a real app, show a toast or error message
       alert("Erro ao gerar estratégia. Tente novamente.");
     } finally {
       setLoading(false);
@@ -69,4 +64,3 @@ export default function App() {
     </Layout>
   );
 }
-

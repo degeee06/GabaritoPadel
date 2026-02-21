@@ -51,10 +51,7 @@ const RESPONSE_SCHEMA: Schema = {
 };
 
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
-  // Nota: Se você estiver usando Vite no Frontend, lembre-se que 
-  // as variáveis de ambiente costumam ser chamadas com import.meta.env.VITE_GEMINI_API_KEY
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
-  
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("No API Key found, using mock data for demo.");
     return {
@@ -89,22 +86,20 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
   try {
-    // Array plano e direto exigido pelo novo SDK @google/genai
-    const contentsArray: any[] = [prompt];
+    const parts: any[] = [{ text: prompt }];
     
     if (input.image) {
-      contentsArray.push({
+      parts.push({
         inlineData: {
           mimeType: "image/jpeg",
-          data: input.image.split(',')[1] // Remove o cabeçalho data:image/jpeg;base64,
+          data: input.image.split(',')[1]
         }
       });
     }
 
-    // Chamada atualizada com o modelo 2.0-flash e a estrutura correta de contents
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash", 
-      contents: contentsArray, 
+      model: "gemini-pro-vision",
+      contents: { parts },
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
@@ -119,7 +114,6 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
 
     const plan = JSON.parse(text) as TacticalPlan;
 
-    // Salvar no Supabase
     try {
       await supabase.from('matches').insert({
         my_team_description: input.myTeamDescription,

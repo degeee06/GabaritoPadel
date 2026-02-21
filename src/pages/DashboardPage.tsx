@@ -1,4 +1,6 @@
 
+import { InstallPWAButton } from '../components/InstallPWAButton';
+
 interface DashboardPageProps {
   onStartAnalysis: () => void;
   onViewHistory: () => void;
@@ -23,6 +25,9 @@ export function DashboardPage({ onStartAnalysis, onViewHistory }: DashboardPageP
         >
           Ver Histórico
         </button>
+      </div>
+      <div className="mt-8 flex justify-center">
+        <InstallPWAButton />
       </div>
     </div>
   );

@@ -1,13 +1,27 @@
 import { motion } from 'framer-motion';
 import { Match } from '../types';
+import { deleteHistory } from '../services/api';
 
 interface HistoryPageProps {
   matches: Match[];
   onMatchSelect: (match: Match) => void;
   onNewMatch: () => void;
+  onHistoryDeleted: () => void;
 }
 
-export function HistoryPage({ matches, onMatchSelect, onNewMatch }: HistoryPageProps) {
+export function HistoryPage({ matches, onMatchSelect, onNewMatch, onHistoryDeleted }: HistoryPageProps) {
+
+  const handleDelete = async () => {
+    if (window.confirm('Tem certeza que deseja excluir todo o seu histórico de análises? Esta ação não pode ser desfeita.')) {
+      try {
+        await deleteHistory();
+        onHistoryDeleted();
+      } catch (error) {
+        alert('Erro ao excluir o histórico. Tente novamente.');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -45,6 +59,11 @@ export function HistoryPage({ matches, onMatchSelect, onNewMatch }: HistoryPageP
               </div>
             </motion.div>
           ))}
+          <div className="text-center pt-4">
+            <button onClick={handleDelete} className="text-sm text-red-500 hover:text-red-400 transition-colors">
+              Excluir Histórico
+            </button>
+          </div>
         </div>
       )}
     </div>

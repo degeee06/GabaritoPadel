@@ -138,3 +138,18 @@ export async function getMatchHistory(): Promise<any[]> {
 
   return data || [];
 }
+
+export async function deleteHistory(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const { error } = await supabase
+    .from('matches')
+    .delete()
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Erro ao excluir histórico:', error);
+    throw error;
+  }
+}

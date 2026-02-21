@@ -76,13 +76,17 @@ export default function App() {
     setPlan(null);
   };
 
+  const handleHistoryDeleted = () => {
+    setMatches([]);
+  };
+
   const renderContent = () => {
     switch (view) {
       case 'dashboard':
         return <DashboardPage onStartAnalysis={() => handleNavigation('form')} onViewHistory={() => handleNavigation('history')} />;
       case 'history':
         if (loading) return <div className="text-center text-zinc-400">Carregando histórico...</div>;
-        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => handleNavigation('form')} />;
+        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => handleNavigation('form')} onHistoryDeleted={handleHistoryDeleted} />;
       case 'form':
         return <StrategyForm onBack={() => handleNavigation('dashboard')} onSubmit={handleFormSubmit} loading={loading} />;
       case 'result':

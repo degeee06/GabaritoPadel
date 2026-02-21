@@ -1,23 +1,24 @@
 import { motion } from 'framer-motion';
 import { Match } from '../types';
-import { deleteHistory } from '../services/api';
+import { deleteMatch } from '../services/api';
 
 interface HistoryPageProps {
   matches: Match[];
   onMatchSelect: (match: Match) => void;
   onNewMatch: () => void;
-  onHistoryDeleted: () => void;
+  onMatchDeleted: (matchId: number) => void;
 }
 
-export function HistoryPage({ matches, onMatchSelect, onNewMatch, onHistoryDeleted }: HistoryPageProps) {
+export function HistoryPage({ matches, onMatchSelect, onNewMatch, onMatchDeleted }: HistoryPageProps) {
 
-  const handleDelete = async () => {
-    if (window.confirm('Tem certeza que deseja excluir todo o seu histórico de análises? Esta ação não pode ser desfeita.')) {
+  const handleDelete = async (e: React.MouseEvent, matchId: number) => {
+    e.stopPropagation(); // Impede que o clique na lixeira selecione a partida
+    if (window.confirm('Tem certeza que deseja excluir esta análise?')) {
       try {
-        await deleteHistory();
-        onHistoryDeleted();
+        await deleteMatch(matchId);
+        onMatchDeleted(matchId);
       } catch (error) {
-        alert('Erro ao excluir o histórico. Tente novamente.');
+        alert('Erro ao excluir a análise. Tente novamente.');
       }
     }
   };
@@ -48,22 +49,23 @@ export function HistoryPage({ matches, onMatchSelect, onNewMatch, onHistoryDelet
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               onClick={() => onMatchSelect(match)}
-              className="bg-zinc-800 p-4 rounded-lg cursor-pointer hover:bg-zinc-700 transition-colors border border-transparent hover:border-lime-500"
+              className="bg-zinc-800 p-4 rounded-lg cursor-pointer hover:bg-zinc-700 transition-colors border border-transparent hover:border-lime-500 group relative"
             >
               <div className="flex justify-between items-center">
-                <div className="truncate pr-4">
+                <div className="truncate pr-8">
                   <p className="font-semibold text-white truncate">{match.my_team_description}</p>
                   <p className="text-sm text-zinc-400 truncate">vs {match.opponents_description}</p>
                 </div>
                 <p className="text-xs text-zinc-500 flex-shrink-0">{new Date(match.created_at).toLocaleDateString()}</p>
               </div>
+              <button 
+                onClick={(e) => handleDelete(e, match.id)}
+                className="absolute top-1/2 right-2 -translate-y-1/2 p-1.5 rounded-full bg-zinc-700/50 text-zinc-400 hover:bg-red-500/20 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
             </motion.div>
           ))}
-          <div className="text-center pt-4">
-            <button onClick={handleDelete} className="text-sm text-red-500 hover:text-red-400 transition-colors">
-              Excluir Histórico
-            </button>
-          </div>
         </div>
       )}
     </div>

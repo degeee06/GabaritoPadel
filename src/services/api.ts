@@ -153,3 +153,19 @@ export async function deleteHistory(): Promise<void> {
     throw error;
   }
 }
+
+export async function deleteMatch(matchId: number): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const { error } = await supabase
+    .from('matches')
+    .delete()
+    .eq('id', matchId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Erro ao excluir partida:', error);
+    throw error;
+  }
+}

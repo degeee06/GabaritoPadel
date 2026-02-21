@@ -20,3 +20,14 @@ export interface MatchHistory {
   result: string;
   score: string;
 }
+
+export interface Match {
+  id: string;
+  created_at: string;
+  my_team_description: string;
+  opponents_description: string;
+  image_url?: string;
+  tactical_plan: TacticalPlan;
+  result?: string;
+  score?: string;
+}

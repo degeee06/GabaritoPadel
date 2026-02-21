@@ -1,5 +1,6 @@
 import { GoogleGenAI, Schema, Type } from "@google/genai";
 import { MatchInput, TacticalPlan } from "../types";
+import { supabase } from "../lib/supabase";
 
 const SYSTEM_INSTRUCTION = `
 Você é o "Padel IQ", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais de duplas de padel e fornecer uma estratégia vencedora.
@@ -97,7 +98,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-1.5-flash",
       contents: { parts },
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -111,7 +112,21 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
       throw new Error("No response from AI");
     }
 
-    return JSON.parse(text) as TacticalPlan;
+    const plan = JSON.parse(text) as TacticalPlan;
+
+    // Save to Supabase
+    try {
+      await supabase.from('matches').insert({
+        my_team_description: input.myTeamDescription,
+        opponents_description: input.opponentsDescription,
+        image_url: input.image ? "Imagem anexada na análise" : null,
+        tactical_plan: plan
+      });
+    } catch (dbError) {
+      console.error("Error saving to Supabase:", dbError);
+    }
+
+    return plan;
   } catch (error) {
     console.error("Error generating plan:", error);
     throw error;

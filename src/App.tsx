@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
+import ReloadPrompt from './components/ReloadPrompt';
 import { HistoryPage } from './pages/HistoryPage';
 import { StrategyForm } from './pages/StrategyForm';
 import { StrategyResult } from './pages/StrategyResult';
@@ -104,6 +105,7 @@ export default function App() {
     <Layout>
       {error && <div className="bg-red-900/50 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
       {renderContent()}
+      <ReloadPrompt />
     </Layout>
   );
 }

@@ -103,7 +103,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
 
     // Chamada atualizada com o modelo 2.0-flash e a estrutura correta de contents
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", 
+      model: "gemini-2.0-flash", 
       contents: contentsArray, 
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,

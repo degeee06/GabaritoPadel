@@ -77,7 +77,7 @@ export default function App() {
   };
 
   const handleMatchDeleted = (matchId: number) => {
-    setMatches(matches.filter(m => m.id !== matchId));
+    setMatches(matches.filter(m => parseInt(m.id, 10) !== matchId));
   };
 
   const renderContent = () => {

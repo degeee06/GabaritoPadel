@@ -2,7 +2,7 @@ import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
 const SYSTEM_INSTRUCTION = `
-Você é o "FatiaPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e imagens de duplas de padel e fornecer uma estratégia vencedora.
+Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e imagens de duplas de padel e fornecer uma estratégia vencedora.
 
 Regras:
 1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).

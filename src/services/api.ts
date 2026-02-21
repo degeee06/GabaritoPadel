@@ -75,31 +75,13 @@ ${input.myTeamDescription}
 Adversários:
 ${input.opponentsDescription}
 
-${input.image ? `ATENÇÃO: Uma imagem foi anexada. Você DEVE analisá-la minuciosamente.
-Procure por:
-1. Falhas de posicionamento (ex: buracos no meio, jogador muito colado na grade, distância entre os parceiros).
-2. Postura e empunhadura (ex: peso nos calcanhares, raquete baixa na rede, preparação atrasada).
-3. Condições da quadra (ex: vidros úmidos, tipo de grama, iluminação).
-Cruze essas informações visuais com as descrições em texto para fornecer dicas EXTREMAMENTE ESPECÍFICAS. Evite dicas genéricas como "jogue no espaço vazio". Diga exatamente ONDE e COMO jogar com base no que você vê na imagem.` : ""}
-
 Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
   try {
-    const parts: any[] = [{ text: prompt }];
-    
-    if (input.image) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: input.image.split(',')[1]
-        }
-      });
-    }
-
     const response = await ai.models.generateContent({
-      model: "gemini-pro-vision",
-      contents: { parts },
+      model: "gemini-2.0-flash",
+      contents: [{ parts: [{ text: prompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
@@ -118,7 +100,6 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
       await supabase.from('matches').insert({
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Imagem anexada na análise" : null,
         tactical_plan: plan
       });
     } catch (dbError) {

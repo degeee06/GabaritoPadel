@@ -1,7 +1,6 @@
 export interface MatchInput {
   myTeamDescription: string;
   opponentsDescription: string;
-  image?: string;
 }
 
 export interface TacticalPlan {

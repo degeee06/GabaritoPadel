@@ -1,4 +1,3 @@
-import { GoogleGenAI, Schema, Type } from "@google/genai";
 import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
@@ -10,96 +9,100 @@ Regras:
 2. Seja direto e prático.
 3. Identifique um "Alvo Principal" (o elo mais fraco ou quem deve ser pressionado).
 4. Crie um checklist tático claro.
-5. Identifique armadilhas a evitar (o que NÃO fazer contra esses oponentes).
+5. Identifique armadilhas a evitar.
 
 A saída DEVE ser estritamente em formato JSON.
 `;
 
-const RESPONSE_SCHEMA: Schema = {
-  type: Type.OBJECT,
+// Como tiramos o SDK, escrevemos o Schema em formato JSON puro
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
   properties: {
-    summary: {
-      type: Type.STRING,
-      description: "Resumo executivo da estratégia (máx 2 frases).",
-    },
-    main_target: {
-      type: Type.STRING,
-      description: "Nome ou posição do jogador alvo principal e por quê.",
-    },
-    tactical_checklist: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Lista de 3-5 ações táticas prioritárias.",
-    },
-    traps_to_avoid: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Lista de 2-3 coisas que devem ser evitadas a todo custo.",
-    },
-    offensive_strategy: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Dicas específicas de ataque.",
-    },
-    defensive_strategy: {
-      type: Type.ARRAY,
-      items: { type: Type.STRING },
-      description: "Dicas específicas de defesa.",
-    },
+    summary: { type: "STRING", description: "Resumo executivo da estratégia (máx 2 frases)." },
+    main_target: { type: "STRING", description: "Nome ou posição do alvo principal e por quê." },
+    tactical_checklist: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 3-5 ações prioritárias." },
+    traps_to_avoid: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 2-3 coisas a evitar." },
+    offensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de ataque." },
+    defensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de defesa." },
   },
   required: ["summary", "main_target", "tactical_checklist", "traps_to_avoid", "offensive_strategy", "defensive_strategy"],
 };
 
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    console.warn("No API Key found, using mock data for demo.");
+
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    console.warn("Chave de API não encontrada. Retornando dados simulados.");
     return {
       summary: "Estratégia simulada: Foque no jogador de revés que tem problemas com bolas altas.",
-      main_target: "Jogador de Revés (devido à altura)",
-      tactical_checklist: ["Usar globos fundos no revés", "Volear curto na paralela", "Evitar o smash do drive"],
-      traps_to_avoid: ["Jogar bolas médias no meio", "Subir à rede sem preparação"],
-      offensive_strategy: ["Bandeja no rincón", "Víbora lenta no meio"],
-      defensive_strategy: ["Saída de parede baixa", "Lob cruzado sempre que possível"],
+      main_target: "Jogador de Revés",
+      tactical_checklist: ["Usar globos fundos", "Volear curto"],
+      traps_to_avoid: ["Jogar no meio"],
+      offensive_strategy: ["Bandeja no rincón"],
+      defensive_strategy: ["Lob cruzado"],
     };
   }
 
-  const ai = new GoogleGenAI({ apiKey });
-
   const prompt = `
 Análise de Partida de Padel:
+Minha Dupla: ${input.myTeamDescription}
+Adversários: ${input.opponentsDescription}
 
-Minha Dupla:
-${input.myTeamDescription}
-
-Adversários:
-${input.opponentsDescription}
-
+${input.image ? "ATENÇÃO: Analise a imagem anexada minuciosamente. Diga exatamente ONDE e COMO jogar com base nas falhas de posicionamento, postura ou condições da quadra que você ver na foto." : ""}
 Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
+  // Montando as partes do conteúdo (Texto + Imagem se houver)
+  const parts: any[] = [{ text: prompt }];
+  
+  if (input.image) {
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: input.image.split(',')[1] // Limpa o prefixo do base64
+      }
+    });
+  }
+
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
+    // Chamada REST direta igual ao projeto Arranchou
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }]
+        },
+        contents: [{ parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA
+        }
+      })
     });
 
-    const text = response.text;
-    if (!text) {
-      throw new Error("Nenhuma resposta da IA");
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(`Erro na API Gemini (${response.status}): ${errData.error?.message || response.statusText}`);
     }
 
-    const plan = JSON.parse(text) as TacticalPlan;
+    const data = await response.json();
+    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
+    if (!analysisText) {
+      throw new Error("A IA não retornou nenhuma análise válida.");
+    }
+
+    const plan = JSON.parse(analysisText) as TacticalPlan;
+
+    // Salvar no Supabase
     try {
       await supabase.from('matches').insert({
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
+        image_url: input.image ? "Imagem anexada na análise" : null,
         tactical_plan: plan
       });
     } catch (dbError) {
@@ -107,6 +110,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
     }
 
     return plan;
+
   } catch (error) {
     console.error("Erro ao gerar plano:", error);
     throw error;

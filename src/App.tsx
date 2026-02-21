@@ -1,66 +1,84 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
-import { Dashboard } from './pages/Dashboard';
+import { HistoryPage } from './pages/HistoryPage';
 import { StrategyForm } from './pages/StrategyForm';
 import { StrategyResult } from './pages/StrategyResult';
-import { MatchInput, TacticalPlan } from './types';
-import { generateTacticalPlan } from './services/api';
+import { MatchInput, TacticalPlan, Match } from './types';
+import { generateTacticalPlan, getMatchHistory } from './services/api';
 
-type ViewState = 'dashboard' | 'form' | 'result';
+type ViewState = 'history' | 'form' | 'result';
 
 export default function App() {
-  const [view, setView] = useState<ViewState>('dashboard');
+  const [view, setView] = useState<ViewState>('history');
   const [plan, setPlan] = useState<TacticalPlan | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleStart = () => {
-    setView('form');
-  };
+  useEffect(() => {
+    const loadHistory = async () => {
+      setLoading(true);
+      try {
+        const historyData = await getMatchHistory();
+        setMatches(historyData as Match[]);
+      } catch (err) {
+        setError('Falha ao carregar o histórico.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadHistory();
+  }, []);
 
   const handleFormSubmit = async (input: MatchInput) => {
     setLoading(true);
+    setError(null);
     try {
       const result = await generateTacticalPlan(input);
       setPlan(result);
       setView('result');
+      // Refresh history after new submission
+      const historyData = await getMatchHistory();
+      setMatches(historyData as Match[]);
     } catch (error) {
       console.error("Failed to generate plan", error);
-      alert("Erro ao gerar estratégia. Tente novamente.");
+      setError("Erro ao gerar estratégia. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
+  
+  const handleSelectMatch = (match: Match) => {
+    setPlan(match.tactical_plan);
+    setView('result');
+  };
 
-  const handleBackToDashboard = () => {
-    setView('dashboard');
+  const handleBackToHistory = () => {
+    setView('history');
     setPlan(null);
   };
 
-  const handleBackToForm = () => {
-    setView('form');
+  const renderContent = () => {
+    if (loading && view === 'history') {
+      return <div className="text-center text-zinc-400">Carregando histórico...</div>;
+    }
+
+    switch (view) {
+      case 'history':
+        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => setView('form')} />;
+      case 'form':
+        return <StrategyForm onBack={handleBackToHistory} onSubmit={handleFormSubmit} loading={loading} />;
+      case 'result':
+        return plan ? <StrategyResult plan={plan} onBack={handleBackToHistory} /> : null;
+      default:
+        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => setView('form')} />;
+    }
   };
 
   return (
     <Layout>
-      {view === 'dashboard' && (
-        <Dashboard onStart={handleStart} />
-      )}
-
-      {view === 'form' && (
-        <StrategyForm 
-          onBack={handleBackToDashboard} 
-          onSubmit={handleFormSubmit} 
-          loading={loading} 
-        />
-      )}
-
-      {view === 'result' && plan && (
-        <StrategyResult 
-          plan={plan} 
-          onBack={handleBackToForm} 
-        />
-      )}
+      {error && <div className="bg-red-900/50 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
+      {renderContent()}
     </Layout>
   );
 }

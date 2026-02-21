@@ -116,3 +116,17 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
     throw error;
   }
 }
+
+export async function getMatchHistory(): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('matches')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar histórico:', error);
+    throw error;
+  }
+
+  return data || [];
+}

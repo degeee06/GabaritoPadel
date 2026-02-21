@@ -53,7 +53,7 @@ const RESPONSE_SCHEMA: Schema = {
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   // Nota: Se você estiver usando Vite no Frontend, lembre-se que 
   // as variáveis de ambiente costumam ser chamadas com import.meta.env.VITE_GEMINI_API_KEY
-  const apiKey = process.env.GEMINI_API_KEY; 
+  const apiKey = process.env.VITE_GEMINI_API_KEY; 
   
   if (!apiKey) {
     console.warn("No API Key found, using mock data for demo.");

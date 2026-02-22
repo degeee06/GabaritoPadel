@@ -20,26 +20,34 @@ type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [isRecovering, setIsRecovering] = useState(false); // NOVO
   const [view, setView] = useState<ViewState>('dashboard');
   const [plan, setPlan] = useState<TacticalPlan | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Estado do Perfil e Pagamento
   const [userProfile, setUserProfile] = useState<{ plan: string, usage_count: number } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-
   const { installPrompt, triggerInstall } = usePWAInstall();
 
   useEffect(() => {
+    // Detecta recuperação na carga inicial
+    const hash = window.location.hash;
+    const searchParams = new URLSearchParams(window.location.search);
+    if (hash.includes('type=recovery') || searchParams.has('code')) {
+      setIsRecovering(true);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchProfile();
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovering(true);
+      }
       if (session) fetchProfile();
     });
 
@@ -51,69 +59,31 @@ export default function App() {
     if (profile) setUserProfile(profile);
   };
 
-  useEffect(() => {
-    if (session && view === 'history') {
-      const loadHistory = async () => {
-        setLoading(true);
-        try {
-          const historyData = await getMatchHistory();
-          setMatches(historyData as Match[]);
-        } catch (err) {
-          setError('Falha ao carregar o histórico.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadHistory();
-    }
-  }, [session, view]);
-
   const handleFormSubmit = async (input: MatchInput) => {
-    // Verifica Limite de Uso
     if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
       setShowUpgradeModal(true);
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
       const result = await generateTacticalPlan(input);
-      
-      // Incrementa uso após sucesso
       await incrementUsageCount();
-      await fetchProfile(); // Atualiza contador local
-
+      await fetchProfile();
       setPlan(result);
       setView('result');
       const historyData = await getMatchHistory();
       setMatches(historyData as Match[]);
-    } catch (error) {
-      console.error("Failed to generate plan", error);
-      setError("Erro ao gerar estratégia. Tente novamente.");
+    } catch (err) {
+      setError("Erro ao gerar estratégia.");
     } finally {
       setLoading(false);
     }
-  };
-  
-  const handleSelectMatch = (match: Match) => {
-    setPlan(match.tactical_plan);
-    setView('result');
   };
 
   const handleNavigation = (targetView: ViewState) => {
     setView(targetView);
     setPlan(null);
-  };
-
-  const handleMatchDeleted = (matchId: string) => {
-    setMatches(matches.filter(m => m.id !== matchId));
-  };
-
-  const handleUpgradeSuccess = async () => {
-    setShowUpgradeModal(false);
-    await fetchProfile();
-    alert("Parabéns! Você agora é Premium. Aproveite análises ilimitadas!");
   };
 
   const renderContent = () => {
@@ -126,8 +96,7 @@ export default function App() {
           onViewServeGuide={() => handleNavigation('serve-guide')}
         />;
       case 'history':
-        if (loading) return <div className="text-center text-zinc-400">Carregando histórico...</div>;
-        return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => handleNavigation('form')} onMatchDeleted={handleMatchDeleted} />;
+        return <HistoryPage matches={matches} onMatchSelect={(m) => { setPlan(m.tactical_plan); setView('result'); }} onNewMatch={() => handleNavigation('form')} onMatchDeleted={(id) => setMatches(matches.filter(m => m.id !== id))} />;
       case 'form':
         return <StrategyForm onBack={() => handleNavigation('dashboard')} onSubmit={handleFormSubmit} loading={loading} />;
       case 'result':
@@ -137,24 +106,19 @@ export default function App() {
       case 'serve-guide':
         return <ServeGuide onBack={() => handleNavigation('dashboard')} />;
       default:
-        return <DashboardPage 
-          onStartAnalysis={() => handleNavigation('form')} 
-          onViewHistory={() => handleNavigation('history')} 
-          onViewGuide={() => handleNavigation('guide')}
-          onViewServeGuide={() => handleNavigation('serve-guide')}
-        />;
+        return null;
     }
   };
 
-  if (!session) {
-    return <AuthPage />
+  // Se não houver sessão OU estivermos recuperando a senha, mostra AuthPage
+  if (!session || isRecovering) {
+    return <AuthPage onRecoveryComplete={() => setIsRecovering(false)} />;
   }
 
   return (
     <Layout installPrompt={installPrompt} triggerInstall={triggerInstall}>
       {error && <div className="bg-red-900/50 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
       
-      {/* Mostra contador de uso para usuários Free */}
       {userProfile && userProfile.plan !== 'premium' && (
         <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-2 mb-4 flex justify-between items-center text-xs text-zinc-400">
           <span>Análises Diárias: <span className="text-lime-400 font-bold">{Math.max(0, 3 - userProfile.usage_count)}</span> restantes</span>
@@ -165,10 +129,7 @@ export default function App() {
       {renderContent()}
 
       {showUpgradeModal && (
-        <UpgradeModal 
-          onClose={() => setShowUpgradeModal(false)} 
-          onSuccess={handleUpgradeSuccess} 
-        />
+        <UpgradeModal onClose={() => setShowUpgradeModal(false)} onSuccess={async () => { setShowUpgradeModal(false); await fetchProfile(); }} />
       )}
     </Layout>
   );

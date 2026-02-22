@@ -29,7 +29,7 @@ export function InstallPWAButton({ installPrompt, triggerInstall }: InstallPWABu
   return (
     <button
       onClick={handleInstallClick}
-      className="hidden sm:flex items-center gap-2 bg-lime-500 text-zinc-900 font-bold text-xs px-3 py-1.5 rounded-full hover:bg-lime-600 transition-colors"
+      className="flex items-center gap-2 bg-lime-500 text-zinc-900 font-bold text-xs px-3 py-1.5 rounded-full hover:bg-lime-600 transition-colors"
       aria-label="Instalar Aplicativo"
     >
       <Download size={14} />

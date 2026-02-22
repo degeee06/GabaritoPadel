@@ -24,16 +24,23 @@ export async function createSubscription(cpf: string, name: string, phone: strin
 
   if (error) {
     console.error("Erro na função create-subscription:", error);
-    // Tenta extrair mensagem de erro do corpo se disponível
-    try {
-      const errorBody = await error.context.json();
-      if (errorBody && errorBody.error) {
-        throw new Error(errorBody.error);
-      }
-    } catch (e) {
-      // Ignora erro de parse
+    
+    let errorMessage = "Erro ao processar pagamento.";
+    
+    // Tenta ler o corpo da resposta de erro
+    if (error instanceof Error && 'context' in error) {
+        try {
+            // @ts-ignore
+            const errorResponse = await error.context.json();
+            if (errorResponse && errorResponse.error) {
+                errorMessage = errorResponse.error;
+            }
+        } catch (e) {
+            console.warn("Não foi possível ler o corpo do erro:", e);
+        }
     }
-    throw error;
+    
+    throw new Error(errorMessage);
   }
   return data;
 }

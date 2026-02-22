@@ -34,7 +34,7 @@ export function AuthPage() {
     }
 
     // 2. Escuta mudanças de estado garantindo que o evento seja capturado
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+ const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       // O Supabase dispara PASSWORD_RECOVERY quando o link de reset é clicado
       if (event === 'PASSWORD_RECOVERY') {
         setMode('updatePassword');

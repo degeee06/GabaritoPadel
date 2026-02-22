@@ -50,9 +50,19 @@ export async function getUserProfile() {
 
 export async function incrementUsageCount() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) {
+    console.error('Usuário não autenticado ao tentar incrementar uso.');
+    return;
+  }
+
+  console.log('Incrementando uso para usuário:', user.id);
 
   // Chama a RPC criada no SQL
   const { error } = await supabase.rpc('increment_usage', { user_id: user.id });
-  if (error) console.error('Erro ao incrementar uso:', error);
+  
+  if (error) {
+    console.error('Erro ao incrementar uso (RPC):', error);
+  } else {
+    console.log('Uso incrementado com sucesso.');
+  }
 }

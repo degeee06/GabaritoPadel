@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 
 export function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -25,11 +26,14 @@ export function AuthPage() {
 
     setLoading(true);
 
-    // Variável para guardar o resultado da requisição
     let authResponse;
 
-    // Chamamos a função DIRETAMENTE do objeto supabase.auth para não perder o contexto
-    if (isSignUp) {
+    if (isRecovery) {
+      authResponse = await supabase.auth.resetPasswordForEmail(email, {
+        captchaToken,
+        redirectTo: window.location.origin, // Redireciona de volta para o app após clicar no link
+      });
+    } else if (isSignUp) {
       authResponse = await supabase.auth.signUp({
         email,
         password,
@@ -48,7 +52,13 @@ export function AuthPage() {
     if (error) {
       setError(error.message);
     } else {
-      setMessage(isSignUp ? 'Verifique seu email para confirmar o cadastro!' : 'Login bem-sucedido!');
+      if (isRecovery) {
+        setMessage('Instruções de recuperação enviadas para seu email!');
+      } else if (isSignUp) {
+        setMessage('Verifique seu email para confirmar o cadastro!');
+      } else {
+        setMessage('Login bem-sucedido!');
+      }
     }
     
     setLoading(false);
@@ -56,10 +66,20 @@ export function AuthPage() {
     setCaptchaToken(null);
   };
 
+  const getTitle = () => {
+    if (isRecovery) return 'Recuperar Senha';
+    return isSignUp ? 'Crie sua conta' : 'Acesse sua conta';
+  };
+
+  const getSubtitle = () => {
+    if (isRecovery) return 'Digite seu email para receber as instruções';
+    return isSignUp ? 'Preencha os dados abaixo' : 'Bem-vindo de volta';
+  };
+
   return (
     <div className="max-w-md mx-auto pt-10">
       <h1 className="text-3xl font-bold text-center text-white mb-2">GabaritoPadel</h1>
-      <p className="text-center text-zinc-400 mb-6">{isSignUp ? 'Crie sua conta para começar' : 'Acesse sua conta'}</p>
+      <p className="text-center text-zinc-400 mb-6">{getTitle()}</p>
       
       <div className="bg-zinc-800 p-8 rounded-xl shadow-lg">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -74,17 +94,31 @@ export function AuthPage() {
               placeholder="seu@email.com"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">Senha</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:border-lime-500 outline-none transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
+
+          {!isRecovery && (
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-zinc-400">Senha</label>
+                {!isSignUp && (
+                  <button 
+                    type="button"
+                    onClick={() => { setIsRecovery(true); setError(null); setMessage(null); }}
+                    className="text-xs text-lime-400 hover:underline"
+                  >
+                    Esqueceu a senha?
+                  </button>
+                )}
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required={!isRecovery}
+                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:border-lime-500 outline-none transition-colors"
+                placeholder="••••••••"
+              />
+            </div>
+          )}
 
           <div className="flex justify-center">
             <Turnstile
@@ -105,15 +139,31 @@ export function AuthPage() {
             disabled={loading || !captchaToken}
             className="w-full bg-lime-400 hover:bg-lime-500 text-zinc-900 font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 disabled:bg-zinc-600 disabled:cursor-not-allowed"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isSignUp ? 'Cadastrar' : 'Entrar')}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isRecovery ? 'Enviar instruções' : (isSignUp ? 'Cadastrar' : 'Entrar'))}
           </button>
 
-          <p className="text-center text-sm text-zinc-400">
-            {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}
-            <button type="button" onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }} className="text-lime-400 hover:underline ml-1">
-              {isSignUp ? 'Entrar' : 'Cadastre-se'}
-            </button>
-          </p>
+          <div className="text-center text-sm text-zinc-400 space-y-2">
+            {isRecovery ? (
+              <button 
+                type="button" 
+                onClick={() => { setIsRecovery(false); setError(null); setMessage(null); }} 
+                className="text-lime-400 hover:underline"
+              >
+                Voltar para o Login
+              </button>
+            ) : (
+              <p>
+                {isSignUp ? 'Já tem uma conta?' : 'Não tem uma conta?'}
+                <button 
+                  type="button" 
+                  onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }} 
+                  className="text-lime-400 hover:underline ml-1"
+                >
+                  {isSignUp ? 'Entrar' : 'Cadastre-se'}
+                </button>
+              </p>
+            )}
+          </div>
         </form>
       </div>
     </div>

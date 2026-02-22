@@ -11,11 +11,13 @@ export function InstallPWAButton() {
 
     // Captura o evento de instalação no Android/Desktop
     const handleBeforeInstallPrompt = (e: any) => {
+      console.log('Evento beforeinstallprompt disparado!', e);
       e.preventDefault();
       setDeferredPrompt(e);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    console.log('Listener beforeinstallprompt adicionado');
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -41,7 +43,14 @@ export function InstallPWAButton() {
   };
 
   if (!deferredPrompt && !isIOS) {
-    return null;
+    return (
+      <button 
+        onClick={() => alert('PWA não pronto para instalação. Verifique o console para logs de "beforeinstallprompt".')}
+        className="text-xs text-zinc-500 hover:text-white transition-colors"
+      >
+        (Debug PWA)
+      </button>
+    );
   }
 
   return (

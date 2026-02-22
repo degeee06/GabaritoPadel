@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Turnstile } from '@marsidev/react-turnstile';
+import { Turnstile, TurnstileInstance } from '@marsidev/react-turnstile';
 import { Loader2, Mail, Lock } from 'lucide-react';
+
+type AuthMode = 'login' | 'signup' | 'recovery' | 'updatePassword';
 
 export function AuthPage() {
   // Estados de visualização
-  const [mode, setMode] = useState<'login' | 'signup' | 'recovery' | 'updatePassword'>('login');
+  const [mode, setMode] = useState<AuthMode>('login');
   
   // Estados dos campos
   const [email, setEmail] = useState('');
@@ -17,19 +19,20 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   
-  const turnstileRef = useRef<any>(null);
+  // Ref tipado corretamente para o Turnstile
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   // Detecta se o usuário veio pelo link de recuperação de senha do e-mail
- useEffect(() => {
-    // 1. Verifica se a URL contém o tipo "recovery" (o link do email traz isso)
+  useEffect(() => {
+    // 1. Verifica se a URL contém o tipo "recovery"
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
       setMode('updatePassword');
     }
 
-    // 2. Escuta mudanças de estado (backup caso o hash mude rápido)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "PASSWORD_RECOVERY") {
+    // 2. Escuta mudanças de estado (Backup)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
         setMode('updatePassword');
       }
     });
@@ -42,69 +45,83 @@ export function AuthPage() {
     setError(null);
     setMessage(null);
 
+    // Validação do Captcha
     if (!captchaToken && mode !== 'updatePassword') {
-      setError("Por favor, complete o desafio de segurança.");
+      setError('Por favor, complete o desafio de segurança.');
       return;
     }
 
     setLoading(true);
 
     try {
-      let result;
+      let authError = null;
 
       if (mode === 'recovery') {
-        // 1. Solicitar link de recuperação
-        result = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
           captchaToken: captchaToken || undefined,
-          redirectTo: `${window.location.origin}`, 
+          redirectTo: `${window.location.origin}/`, 
         });
-      } else if (mode === 'updatePassword') {
-        // 2. Definir a nova senha de fato
-        result = await supabase.auth.updateUser({ password });
-      } else if (mode === 'signup') {
-        // 3. Cadastro
-        result = await supabase.auth.signUp({
+        authError = error;
+      } 
+      else if (mode === 'updatePassword') {
+        const { error } = await supabase.auth.updateUser({ password });
+        authError = error;
+      } 
+      else if (mode === 'signup') {
+        const { error } = await supabase.auth.signUp({
           email,
           password,
           options: { captchaToken: captchaToken || undefined },
         });
-      } else {
-        // 4. Login
-        result = await supabase.auth.signInWithPassword({
+        authError = error;
+      } 
+      else {
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
           options: { captchaToken: captchaToken || undefined },
         });
+        authError = error;
       }
 
-      if (result.error) {
-        setError(result.error.message);
+      // Tratamento de Sucesso ou Erro
+      if (authError) {
+        setError(authError.message);
+        // Reseta o captcha apenas se deu erro
+        turnstileRef.current?.reset();
+        setCaptchaToken(null);
       } else {
         if (mode === 'recovery') {
           setMessage('Instruções enviadas para seu e-mail!');
+          setEmail('');
         } else if (mode === 'updatePassword') {
           setMessage('Senha atualizada com sucesso! Você já pode entrar.');
+          setPassword('');
           setTimeout(() => setMode('login'), 3000);
         } else if (mode === 'signup') {
           setMessage('Verifique seu e-mail para confirmar o cadastro!');
+          setEmail('');
+          setPassword('');
         } else {
           setMessage('Login bem-sucedido!');
-          // Aqui você pode redirecionar: window.location.href = '/dashboard';
+          // Redirecionamento em caso de sucesso
+          // window.location.href = '/dashboard';
         }
       }
     } catch (err) {
-      setError('Ocorreu um erro inesperado.');
-    } finally {
-      setLoading(false);
+      setError('Ocorreu um erro inesperado. Tente novamente.');
       turnstileRef.current?.reset();
       setCaptchaToken(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   const getTexts = () => {
     if (mode === 'recovery') return { title: 'Recuperar Senha', button: 'Enviar Instruções' };
     if (mode === 'updatePassword') return { title: 'Nova Senha', button: 'Atualizar Senha' };
-    return mode === 'signup' ? { title: 'Crie sua conta', button: 'Cadastrar' } : { title: 'Acesse sua conta', button: 'Entrar' };
+    if (mode === 'signup') return { title: 'Crie sua conta', button: 'Cadastrar' };
+    return { title: 'Acesse sua conta', button: 'Entrar' };
   };
 
   return (
@@ -115,7 +132,7 @@ export function AuthPage() {
       <div className="bg-zinc-800 p-8 rounded-xl shadow-lg border border-zinc-700/50">
         <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* Campo de Email - Escondido apenas na hora de digitar a NOVA senha */}
+          {/* Campo de Email */}
           {mode !== 'updatePassword' && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">E-mail</label>
@@ -133,7 +150,7 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Campo de Senha - Escondido apenas no pedido de recuperação */}
+          {/* Campo de Senha */}
           {mode !== 'recovery' && (
             <div>
               <div className="flex justify-between items-center mb-1">
@@ -160,7 +177,7 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Captcha - Escondido apenas na atualização de senha final */}
+          {/* Turnstile Captcha */}
           {mode !== 'updatePassword' && (
             <div className="flex justify-center py-2">
               <Turnstile
@@ -172,9 +189,11 @@ export function AuthPage() {
             </div>
           )}
 
+          {/* Mensagens de Feedback */}
           {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center">{error}</div>}
           {message && <div className="bg-lime-500/10 border border-lime-500/20 text-lime-400 p-3 rounded-lg text-sm text-center">{message}</div>}
 
+          {/* Botão de Submit */}
           <button 
             type="submit" 
             disabled={loading || (!captchaToken && mode !== 'updatePassword')}
@@ -187,9 +206,9 @@ export function AuthPage() {
           <div className="text-center text-sm text-zinc-400 pt-2">
             {mode === 'login' ? (
               <p>Não tem conta? <button type="button" onClick={() => setMode('signup')} className="text-lime-400 hover:underline font-semibold">Cadastre-se</button></p>
-            ) : (
+            ) : mode !== 'updatePassword' ? (
               <button type="button" onClick={() => setMode('login')} className="text-lime-400 hover:underline font-semibold">Voltar para o Login</button>
-            )}
+            ) : null}
           </div>
         </form>
       </div>

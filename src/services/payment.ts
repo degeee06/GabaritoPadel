@@ -9,11 +9,32 @@ export interface SubscriptionResponse {
 }
 
 export async function createSubscription(cpf: string, name: string, phone: string): Promise<SubscriptionResponse> {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+
   const { data, error } = await supabase.functions.invoke('create-subscription', {
     body: { cpf, name, phone },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Erro na função create-subscription:", error);
+    // Tenta extrair mensagem de erro do corpo se disponível
+    try {
+      const errorBody = await error.context.json();
+      if (errorBody && errorBody.error) {
+        throw new Error(errorBody.error);
+      }
+    } catch (e) {
+      // Ignora erro de parse
+    }
+    throw error;
+  }
   return data;
 }
 

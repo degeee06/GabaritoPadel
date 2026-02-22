@@ -12,6 +12,8 @@ import { Session } from '@supabase/supabase-js';
 
 import { PositionGuide } from './components/PositionGuide';
 import { ServeGuide } from './components/ServeGuide';
+import { UpgradeModal } from './components/UpgradeModal';
+import { getUserProfile, incrementUsageCount } from './services/payment';
 
 type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide';
 
@@ -22,18 +24,29 @@ export default function App() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Estado do Perfil e Pagamento
+  const [userProfile, setUserProfile] = useState<{ plan: string, usage_count: number } | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) fetchProfile();
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) fetchProfile();
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchProfile = async () => {
+    const profile = await getUserProfile();
+    if (profile) setUserProfile(profile);
+  };
 
   useEffect(() => {
     if (session && view === 'history') {
@@ -53,10 +66,21 @@ export default function App() {
   }, [session, view]);
 
   const handleFormSubmit = async (input: MatchInput) => {
+    // Verifica Limite de Uso
+    if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
       const result = await generateTacticalPlan(input);
+      
+      // Incrementa uso após sucesso
+      await incrementUsageCount();
+      await fetchProfile(); // Atualiza contador local
+
       setPlan(result);
       setView('result');
       const historyData = await getMatchHistory();
@@ -81,6 +105,12 @@ export default function App() {
 
   const handleMatchDeleted = (matchId: number) => {
     setMatches(matches.filter(m => parseInt(m.id, 10) !== matchId));
+  };
+
+  const handleUpgradeSuccess = async () => {
+    setShowUpgradeModal(false);
+    await fetchProfile();
+    alert("Parabéns! Você agora é Premium. Aproveite análises ilimitadas!");
   };
 
   const renderContent = () => {
@@ -120,7 +150,23 @@ export default function App() {
   return (
     <Layout>
       {error && <div className="bg-red-900/50 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
+      
+      {/* Mostra contador de uso para usuários Free */}
+      {userProfile && userProfile.plan !== 'premium' && (
+        <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-2 mb-4 flex justify-between items-center text-xs text-zinc-400">
+          <span>Análises Gratuitas: <span className="text-lime-400 font-bold">{3 - userProfile.usage_count}</span> restantes</span>
+          <button onClick={() => setShowUpgradeModal(true)} className="text-lime-400 hover:underline">Fazer Upgrade</button>
+        </div>
+      )}
+
       {renderContent()}
+
+      {showUpgradeModal && (
+        <UpgradeModal 
+          onClose={() => setShowUpgradeModal(false)} 
+          onSuccess={handleUpgradeSuccess} 
+        />
+      )}
     </Layout>
   );
 }

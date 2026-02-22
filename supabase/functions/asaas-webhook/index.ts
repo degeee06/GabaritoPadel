@@ -32,7 +32,7 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Função auxiliar para calcular 30 dias a partir de agora
+    // Calcula 30 dias a partir de agora
     const getExpirationDate = () => {
         const date = new Date();
         date.setDate(date.getDate() + 30);
@@ -63,7 +63,8 @@ serve(async (req) => {
                     .from('profiles')
                     .update({ 
                         plan: 'premium',
-                        premium_expires_at: getExpirationDate() // <--- Adiciona 30 dias
+                        premium_expires_at: getExpirationDate(),
+                        usage_count: 0 // Zera o contador para iniciar as 100 análises
                     })
                     .eq('id', userId);
             }
@@ -96,7 +97,8 @@ serve(async (req) => {
                 .from('profiles')
                 .update({ 
                     plan: 'premium',
-                    premium_expires_at: getExpirationDate() // <--- Adiciona 30 dias
+                    premium_expires_at: getExpirationDate(),
+                    usage_count: 0 // Zera o contador para iniciar as 100 análises
                 })
                 .eq('id', userId);
         }

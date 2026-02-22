@@ -22,10 +22,8 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
     phone: ''
   });
 
-  // Referência para guardar o ID do intervalo e podermos limpar depois
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Limpa o intervalo automaticamente se o componente for desmontado (fechado)
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) {
@@ -49,7 +47,6 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
       setQrCodeBase64(result.qr_code_base64);
       setStep('payment');
       
-      // Inicia polling
       startPolling(result.id);
     } catch (err: any) {
       setError(err.message || 'Erro ao gerar Pix. Verifique os dados.');
@@ -59,24 +56,19 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
   };
 
   const startPolling = (pid: string) => {
-    // Garantir que não existam múltiplos intervalos rodando
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
 
     pollingIntervalRef.current = setInterval(async () => {
       try {
         const status = await checkPaymentStatus(pid);
         if (status === 'approved') {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-          }
-          onSuccess(); // Sucesso! O pagamento caiu e a tela principal vai reagir
+          if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+          onSuccess(); 
         }
       } catch (e) {
         console.error('Polling error', e);
       }
-    }, 5000); // Checa a cada 5s
+    }, 5000); 
   };
 
   const copyToClipboard = () => {
@@ -88,10 +80,7 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
   };
 
   const handleClose = () => {
-    // Limpa o intervalo caso o usuário clique no botão de fechar (X)
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     onClose();
   };
 
@@ -112,15 +101,15 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
 
           <div className="mb-6">
             <p className="text-zinc-300 text-sm mb-4">
-              Você atingiu o limite diário de 3 análises gratuitas. Seu limite será renovado amanhã.
+              Você atingiu seu limite de análises.
             </p>
             <p className="text-zinc-400 text-xs mb-4">
-              Não quer esperar? Faça o upgrade para continuar evoluindo seu jogo agora mesmo!
+              Faça o upgrade para continuar evoluindo seu jogo agora mesmo com uma margem segura e de alta performance!
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-center gap-2 text-zinc-400 text-sm">
                 <Check className="w-4 h-4 text-lime-400" />
-                Análises ilimitadas por 30 dias
+                Até 100 análises táticas por mês
               </li>
               <li className="flex items-center gap-2 text-zinc-400 text-sm">
                 <Check className="w-4 h-4 text-lime-400" />
@@ -133,7 +122,7 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
             </ul>
             <div className="bg-zinc-800/50 p-4 rounded-lg border border-zinc-700 text-center">
               <span className="text-zinc-400 text-sm">Acesso de 30 dias por apenas</span>
-              <div className="text-3xl font-bold text-white">R$ 5,00</div>
+              <div className="text-3xl font-bold text-white">R$ 9,90</div>
             </div>
           </div>
 

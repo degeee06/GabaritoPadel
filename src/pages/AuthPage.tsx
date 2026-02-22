@@ -5,37 +5,30 @@ import { Loader2, Mail, Lock } from 'lucide-react';
 
 type AuthMode = 'login' | 'signup' | 'recovery' | 'updatePassword';
 
-export function AuthPage() {
-  // Estados de visualização
+interface AuthPageProps {
+  onRecoveryComplete?: () => void;
+}
+
+export function AuthPage({ onRecoveryComplete }: AuthPageProps) {
   const [mode, setMode] = useState<AuthMode>('login');
-  
-  // Estados dos campos
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  
-  // Estados de feedback
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  
-  // Ref tipado corretamente para o Turnstile
   const turnstileRef = useRef<TurnstileInstance>(null);
 
-  // Detecta se o usuário veio pelo link de recuperação de senha do e-mail
- useEffect(() => {
-    // 1. Verifica tanto a Hash (fluxo antigo) quanto a Search (fluxo PKCE novo)
+  useEffect(() => {
     const hash = window.location.hash;
     const searchParams = new URLSearchParams(window.location.search);
     
-    // Se a URL tiver type=recovery (antigo) OU tiver um código de erro/sucesso de autenticação
+    // Detecta se é um link de recuperação
     if (hash.includes('type=recovery') || searchParams.has('code')) {
       setMode('updatePassword');
     }
 
-    // 2. Escuta mudanças de estado garantindo que o evento seja capturado
- const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // O Supabase dispara PASSWORD_RECOVERY quando o link de reset é clicado
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setMode('updatePassword');
       }
@@ -43,13 +36,12 @@ export function AuthPage() {
 
     return () => subscription.unsubscribe();
   }, []);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setMessage(null);
 
-    // Validação do Captcha
     if (!captchaToken && mode !== 'updatePassword') {
       setError('Por favor, complete o desafio de segurança.');
       return;
@@ -63,7 +55,7 @@ export function AuthPage() {
       if (mode === 'recovery') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           captchaToken: captchaToken || undefined,
-          redirectTo: `${window.location.origin}/`, 
+          redirectTo: `${window.location.origin}/`,
         });
         authError = error;
       } 
@@ -88,10 +80,8 @@ export function AuthPage() {
         authError = error;
       }
 
-      // Tratamento de Sucesso ou Erro
       if (authError) {
         setError(authError.message);
-        // Reseta o captcha apenas se deu erro
         turnstileRef.current?.reset();
         setCaptchaToken(null);
       } else {
@@ -99,23 +89,20 @@ export function AuthPage() {
           setMessage('Instruções enviadas para seu e-mail!');
           setEmail('');
         } else if (mode === 'updatePassword') {
-          setMessage('Senha atualizada com sucesso! Você já pode entrar.');
-          setPassword('');
-          setTimeout(() => setMode('login'), 3000);
+          setMessage('Senha atualizada com sucesso!');
+          // Avisa o App que a recuperação acabou
+          if (onRecoveryComplete) onRecoveryComplete();
+          setTimeout(() => {
+            window.location.href = '/'; // Limpa a URL e reseta o app
+          }, 2000);
         } else if (mode === 'signup') {
           setMessage('Verifique seu e-mail para confirmar o cadastro!');
-          setEmail('');
-          setPassword('');
         } else {
           setMessage('Login bem-sucedido!');
-          // Redirecionamento em caso de sucesso
-          // window.location.href = '/dashboard';
         }
       }
     } catch (err) {
-      setError('Ocorreu um erro inesperado. Tente novamente.');
-      turnstileRef.current?.reset();
-      setCaptchaToken(null);
+      setError('Ocorreu um erro inesperado.');
     } finally {
       setLoading(false);
     }
@@ -135,8 +122,6 @@ export function AuthPage() {
       
       <div className="bg-zinc-800 p-8 rounded-xl shadow-lg border border-zinc-700/50">
         <form onSubmit={handleSubmit} className="space-y-5">
-          
-          {/* Campo de Email */}
           {mode !== 'updatePassword' && (
             <div>
               <label className="block text-sm font-medium text-zinc-400 mb-1">E-mail</label>
@@ -154,7 +139,6 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Campo de Senha */}
           {mode !== 'recovery' && (
             <div>
               <div className="flex justify-between items-center mb-1">
@@ -181,7 +165,6 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Turnstile Captcha */}
           {mode !== 'updatePassword' && (
             <div className="flex justify-center py-2">
               <Turnstile
@@ -193,11 +176,9 @@ export function AuthPage() {
             </div>
           )}
 
-          {/* Mensagens de Feedback */}
           {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm text-center">{error}</div>}
           {message && <div className="bg-lime-500/10 border border-lime-500/20 text-lime-400 p-3 rounded-lg text-sm text-center">{message}</div>}
 
-          {/* Botão de Submit */}
           <button 
             type="submit" 
             disabled={loading || (!captchaToken && mode !== 'updatePassword')}
@@ -206,7 +187,6 @@ export function AuthPage() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : getTexts().button}
           </button>
 
-          {/* Rodapé Alternável */}
           <div className="text-center text-sm text-zinc-400 pt-2">
             {mode === 'login' ? (
               <p>Não tem conta? <button type="button" onClick={() => setMode('signup')} className="text-lime-400 hover:underline font-semibold">Cadastre-se</button></p>

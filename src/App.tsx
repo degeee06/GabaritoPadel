@@ -154,7 +154,7 @@ export default function App() {
       {/* Mostra contador de uso para usuários Free */}
       {userProfile && userProfile.plan !== 'premium' && (
         <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-2 mb-4 flex justify-between items-center text-xs text-zinc-400">
-          <span>Análises Gratuitas: <span className="text-lime-400 font-bold">{3 - userProfile.usage_count}</span> restantes</span>
+          <span>Análises Diárias: <span className="text-lime-400 font-bold">{Math.max(0, 3 - userProfile.usage_count)}</span> restantes</span>
           <button onClick={() => setShowUpgradeModal(true)} className="text-lime-400 hover:underline">Fazer Upgrade</button>
         </div>
       )}

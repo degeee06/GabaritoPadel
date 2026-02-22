@@ -85,7 +85,10 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
 
           <div className="mb-6">
             <p className="text-zinc-300 text-sm mb-4">
-              Você atingiu o limite de 3 análises gratuitas. Faça o upgrade para continuar evoluindo seu jogo!
+              Você atingiu o limite diário de 3 análises gratuitas. Seu limite será renovado amanhã.
+            </p>
+            <p className="text-zinc-400 text-xs mb-4">
+              Não quer esperar? Faça o upgrade para continuar evoluindo seu jogo agora mesmo!
             </p>
             <ul className="space-y-2 mb-6">
               <li className="flex items-center gap-2 text-zinc-400 text-sm">

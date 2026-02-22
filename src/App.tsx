@@ -10,7 +10,10 @@ import { generateTacticalPlan, getMatchHistory } from './services/api';
 import { supabase } from './lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
-type ViewState = 'dashboard' | 'history' | 'form' | 'result';
+import { PositionGuide } from './components/PositionGuide';
+import { ServeGuide } from './components/ServeGuide';
+
+type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -83,7 +86,12 @@ export default function App() {
   const renderContent = () => {
     switch (view) {
       case 'dashboard':
-        return <DashboardPage onStartAnalysis={() => handleNavigation('form')} onViewHistory={() => handleNavigation('history')} />;
+        return <DashboardPage 
+          onStartAnalysis={() => handleNavigation('form')} 
+          onViewHistory={() => handleNavigation('history')} 
+          onViewGuide={() => handleNavigation('guide')}
+          onViewServeGuide={() => handleNavigation('serve-guide')}
+        />;
       case 'history':
         if (loading) return <div className="text-center text-zinc-400">Carregando histórico...</div>;
         return <HistoryPage matches={matches} onMatchSelect={handleSelectMatch} onNewMatch={() => handleNavigation('form')} onMatchDeleted={handleMatchDeleted} />;
@@ -91,8 +99,17 @@ export default function App() {
         return <StrategyForm onBack={() => handleNavigation('dashboard')} onSubmit={handleFormSubmit} loading={loading} />;
       case 'result':
         return plan ? <StrategyResult plan={plan} onBack={() => handleNavigation('history')} /> : null;
+      case 'guide':
+        return <PositionGuide onBack={() => handleNavigation('dashboard')} />;
+      case 'serve-guide':
+        return <ServeGuide onBack={() => handleNavigation('dashboard')} />;
       default:
-        return <DashboardPage onStartAnalysis={() => handleNavigation('form')} onViewHistory={() => handleNavigation('history')} />;
+        return <DashboardPage 
+          onStartAnalysis={() => handleNavigation('form')} 
+          onViewHistory={() => handleNavigation('history')} 
+          onViewGuide={() => handleNavigation('guide')}
+          onViewServeGuide={() => handleNavigation('serve-guide')}
+        />;
     }
   };
 

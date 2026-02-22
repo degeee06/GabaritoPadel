@@ -1,7 +1,8 @@
-import React from 'react';
-import { ArrowLeft, Target, CheckSquare, AlertTriangle, Shield, Sword } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Target, CheckSquare, AlertTriangle, Shield, Sword, Map, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TacticalPlan } from '../types';
+import { PositionGuide } from '../components/PositionGuide';
 
 interface StrategyResultProps {
   plan: TacticalPlan;
@@ -25,6 +26,12 @@ const Section = ({ icon, title, items }: { icon: React.ReactNode, title: string,
 );
 
 export function StrategyResult({ plan, onBack }: StrategyResultProps) {
+  const [viewGuide, setViewGuide] = useState<string | null>(null);
+
+  if (viewGuide) {
+    return <PositionGuide positionId={viewGuide} onBack={() => setViewGuide(null)} />;
+  }
+
   return (
     <div className="space-y-6">
       <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
@@ -36,6 +43,38 @@ export function StrategyResult({ plan, onBack }: StrategyResultProps) {
         <h1 className="text-3xl font-bold text-white">Plano Tático Gerado</h1>
         <p className="text-zinc-400 mt-2 max-w-prose">{plan.summary}</p>
       </motion.div>
+
+      {/* Botões de Referência Rápida */}
+      <div className="grid grid-cols-2 gap-3">
+        <button 
+          onClick={() => setViewGuide('ataque')}
+          className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 p-3 rounded-lg text-sm text-lime-400 transition-colors"
+        >
+          <Sword className="w-4 h-4" />
+          Ver Posição de Ataque
+        </button>
+        <button 
+          onClick={() => setViewGuide('defesa')}
+          className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 p-3 rounded-lg text-sm text-lime-400 transition-colors"
+        >
+          <Shield className="w-4 h-4" />
+          Ver Posição de Defesa
+        </button>
+        <button 
+          onClick={() => setViewGuide('saque')}
+          className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 p-3 rounded-lg text-sm text-lime-400 transition-colors"
+        >
+          <Info className="w-4 h-4" />
+          Ver Posição de Saque
+        </button>
+        <button 
+          onClick={() => setViewGuide('diagrama')}
+          className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 p-3 rounded-lg text-sm text-lime-400 transition-colors"
+        >
+          <Map className="w-4 h-4" />
+          Ver Zonas da Quadra
+        </button>
+      </div>
 
       <div className="space-y-4">
         <motion.div 

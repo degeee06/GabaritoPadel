@@ -1,23 +1,25 @@
 import { supabase } from '../lib/supabase';
 
-export interface SubscriptionResponse {
-  subscriptionId: string;
-  paymentId: string;
+// 1. Interface atualizada para o retorno do pagamento único
+export interface PaymentResponse {
+  id: string; 
+  status: string;
   qr_code: string;
   qr_code_base64: string;
-  value: number;
+  ticket_url: string;
 }
 
-export async function createSubscription(cpf: string, name: string, phone: string): Promise<SubscriptionResponse> {
+// 2. Nome da função alterado para fazer sentido com a regra avulsa
+export async function createPremiumPayment(cpf: string, name: string, phone: string): Promise<PaymentResponse> {
   const { data: { session } } = await supabase.auth.getSession();
   
-  if (!session) {
+  if (!session || !session.user) {
     throw new Error("Sessão expirada. Faça login novamente.");
   }
 
-  // Construir a URL da função manualmente para ter controle total do fetch
   const projectUrl = import.meta.env.VITE_SUPABASE_URL;
-  const functionUrl = `${projectUrl}/functions/v1/create-subscription`;
+  // 3. URL APONTANDO PARA O ARQUIVO CORRETO: create-payment
+  const functionUrl = `${projectUrl}/functions/v1/create-payment`;
 
   try {
     const response = await fetch(functionUrl, {
@@ -26,7 +28,17 @@ export async function createSubscription(cpf: string, name: string, phone: strin
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({ cpf, name, phone })
+      // 4. PAYLOAD EXATO EXIGIDO PELA FUNÇÃO CREATE-PAYMENT
+      body: JSON.stringify({ 
+        action: 'create', 
+        amount: 5.00, 
+        userId: session.user.id,
+        payerEmail: session.user.email,
+        payerCpf: cpf,
+        name, 
+        phone,
+        description: "Acesso Premium 30 dias - GabaritoPadel"
+      })
     });
 
     const data = await response.json();
@@ -37,7 +49,7 @@ export async function createSubscription(cpf: string, name: string, phone: strin
 
     return data;
   } catch (error: any) {
-    console.error("Erro detalhado createSubscription:", error);
+    console.error("Erro detalhado createPremiumPayment:", error);
     throw new Error(error.message || "Falha ao comunicar com o servidor de pagamento.");
   }
 }
@@ -63,13 +75,36 @@ export async function getUserProfile() {
     .single();
 
   if (error) {
-    // Se não existir perfil (erro PGRST116), cria um básico (fallback caso trigger falhe)
     if (error.code === 'PGRST116') {
       return { plan: 'free', usage_count: 0 };
     }
     console.error('Erro ao buscar perfil:', error);
     return null;
   }
+
+  // ==========================================
+  // Lógica de Expiração Automática de 30 dias
+  // ==========================================
+  if (data.plan === 'premium' && data.premium_expires_at) {
+    const expiresAt = new Date(data.premium_expires_at);
+    const now = new Date();
+
+    // Se a data atual for maior que a data de expiração
+    if (now > expiresAt) {
+      console.log('Plano Premium expirou. Rebaixando usuário...');
+      
+      // 1. Atualiza no banco de dados para "free" e limpa a data
+      await supabase
+        .from('profiles')
+        .update({ plan: 'free', premium_expires_at: null })
+        .eq('id', user.id);
+
+      // 2. Modifica o objeto localmente para o app já bloquear o acesso na hora
+      data.plan = 'free';
+      data.premium_expires_at = null;
+    }
+  }
+
   return data;
 }
 

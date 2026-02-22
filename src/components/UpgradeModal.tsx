@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check, Copy, Loader2 } from 'lucide-react';
-import { createSubscription, checkPaymentStatus } from '../services/payment';
+import { createPremiumPayment, checkPaymentStatus } from '../services/payment';
 
 interface UpgradeModalProps {
   onClose: () => void;
@@ -22,6 +22,18 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
     phone: ''
   });
 
+  // Referência para guardar o ID do intervalo e podermos limpar depois
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Limpa o intervalo automaticamente se o componente for desmontado (fechado)
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -32,13 +44,13 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
     setError(null);
 
     try {
-      const result = await createSubscription(formData.cpf, formData.name, formData.phone);
+      const result = await createPremiumPayment(formData.cpf, formData.name, formData.phone);
       setQrCode(result.qr_code);
       setQrCodeBase64(result.qr_code_base64);
       setStep('payment');
       
       // Inicia polling
-      startPolling(result.paymentId);
+      startPolling(result.id);
     } catch (err: any) {
       setError(err.message || 'Erro ao gerar Pix. Verifique os dados.');
     } finally {
@@ -47,12 +59,19 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
   };
 
   const startPolling = (pid: string) => {
-    const interval = setInterval(async () => {
+    // Garantir que não existam múltiplos intervalos rodando
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    pollingIntervalRef.current = setInterval(async () => {
       try {
         const status = await checkPaymentStatus(pid);
         if (status === 'approved') {
-          clearInterval(interval);
-          onSuccess();
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+          }
+          onSuccess(); // Sucesso! O pagamento caiu e a tela principal vai reagir
         }
       } catch (e) {
         console.error('Polling error', e);
@@ -68,6 +87,14 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
     }
   };
 
+  const handleClose = () => {
+    // Limpa o intervalo caso o usuário clique no botão de fechar (X)
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <motion.div 
@@ -78,7 +105,7 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">Upgrade <span className="text-lime-400">PRO</span></h2>
-            <button onClick={onClose} className="text-zinc-400 hover:text-white">
+            <button onClick={handleClose} className="text-zinc-400 hover:text-white">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -93,7 +120,7 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
             <ul className="space-y-2 mb-6">
               <li className="flex items-center gap-2 text-zinc-400 text-sm">
                 <Check className="w-4 h-4 text-lime-400" />
-                Análises ilimitadas
+                Análises ilimitadas por 30 dias
               </li>
               <li className="flex items-center gap-2 text-zinc-400 text-sm">
                 <Check className="w-4 h-4 text-lime-400" />
@@ -105,8 +132,8 @@ export function UpgradeModal({ onClose, onSuccess }: UpgradeModalProps) {
               </li>
             </ul>
             <div className="bg-zinc-800/50 p-4 rounded-lg border border-zinc-700 text-center">
-              <span className="text-zinc-400 text-sm">Apenas</span>
-              <div className="text-3xl font-bold text-white">R$ 5,00<span className="text-sm font-normal text-zinc-400">/mês</span></div>
+              <span className="text-zinc-400 text-sm">Acesso de 30 dias por apenas</span>
+              <div className="text-3xl font-bold text-white">R$ 5,00</div>
             </div>
           </div>
 

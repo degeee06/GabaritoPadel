@@ -15,34 +15,31 @@ export async function createSubscription(cpf: string, name: string, phone: strin
     throw new Error("Sessão expirada. Faça login novamente.");
   }
 
-  const { data, error } = await supabase.functions.invoke('create-subscription', {
-    body: { cpf, name, phone },
-    headers: {
-      Authorization: `Bearer ${session.access_token}`
-    }
-  });
+  // Construir a URL da função manualmente para ter controle total do fetch
+  const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+  const functionUrl = `${projectUrl}/functions/v1/create-subscription`;
 
-  if (error) {
-    console.error("Erro na função create-subscription:", error);
-    
-    let errorMessage = "Erro ao processar pagamento.";
-    
-    // Tenta ler o corpo da resposta de erro
-    if (error instanceof Error && 'context' in error) {
-        try {
-            // @ts-ignore
-            const errorResponse = await error.context.json();
-            if (errorResponse && errorResponse.error) {
-                errorMessage = errorResponse.error;
-            }
-        } catch (e) {
-            console.warn("Não foi possível ler o corpo do erro:", e);
-        }
+  try {
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ cpf, name, phone })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `Erro na função: ${response.statusText}`);
     }
-    
-    throw new Error(errorMessage);
+
+    return data;
+  } catch (error: any) {
+    console.error("Erro detalhado createSubscription:", error);
+    throw new Error(error.message || "Falha ao comunicar com o servidor de pagamento.");
   }
-  return data;
 }
 
 export async function checkPaymentStatus(paymentId: string): Promise<'approved' | 'pending' | 'failed'> {

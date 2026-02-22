@@ -25,15 +25,25 @@ export function AuthPage() {
 
     setLoading(true);
 
-    const authMethod = isSignUp ? supabase.auth.signUp : supabase.auth.signInWithPassword;
+    // Variável para guardar o resultado da requisição
+    let authResponse;
 
-    const { error } = await authMethod({
-      email,
-      password,
-      options: {
-        captchaToken,
-      },
-    });
+    // Chamamos a função DIRETAMENTE do objeto supabase.auth para não perder o contexto
+    if (isSignUp) {
+      authResponse = await supabase.auth.signUp({
+        email,
+        password,
+        options: { captchaToken },
+      });
+    } else {
+      authResponse = await supabase.auth.signInWithPassword({
+        email,
+        password,
+        options: { captchaToken },
+      });
+    }
+
+    const { error } = authResponse;
 
     if (error) {
       setError(error.message);

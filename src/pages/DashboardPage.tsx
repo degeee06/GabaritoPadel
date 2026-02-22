@@ -1,4 +1,5 @@
 
+import { usePWAInstall } from '../hooks/usePWAInstall';
 import { InstallPWAButton } from '../components/InstallPWAButton';
 import { BookOpen, Activity } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide }: DashboardPageProps) {
+  const { installPrompt, triggerInstall } = usePWAInstall();
   return (
     <div className="text-center py-10">
       <h1 className="text-4xl font-bold text-white">Olá Jogador!</h1>
@@ -48,7 +50,7 @@ export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onV
       </div>
 
       <div className="mt-8 flex justify-center">
-        <InstallPWAButton />
+        <InstallPWAButton installPrompt={installPrompt} triggerInstall={triggerInstall} />
       </div>
     </div>
   );

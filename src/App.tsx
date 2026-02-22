@@ -14,6 +14,7 @@ import { PositionGuide } from './components/PositionGuide';
 import { ServeGuide } from './components/ServeGuide';
 import { UpgradeModal } from './components/UpgradeModal';
 import { getUserProfile, incrementUsageCount } from './services/payment';
+import { usePWAInstall } from './hooks/usePWAInstall';
 
 type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide';
 
@@ -28,6 +29,8 @@ export default function App() {
   // Estado do Perfil e Pagamento
   const [userProfile, setUserProfile] = useState<{ plan: string, usage_count: number } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const { installPrompt, triggerInstall } = usePWAInstall();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -148,7 +151,7 @@ export default function App() {
   }
 
   return (
-    <Layout>
+    <Layout installPrompt={installPrompt} triggerInstall={triggerInstall}>
       {error && <div className="bg-red-900/50 border border-red-500/30 text-red-300 p-3 rounded-lg mb-4">{error}</div>}
       
       {/* Mostra contador de uso para usuários Free */}

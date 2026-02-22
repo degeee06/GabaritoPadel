@@ -1,55 +1,39 @@
+import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-export function InstallPWAButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+interface InstallPWAButtonProps {
+  installPrompt: any;
+  triggerInstall: () => void;
+}
+
+export function InstallPWAButton({ installPrompt, triggerInstall }: InstallPWAButtonProps) {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detecta se é iOS
     const isIosDevice = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
     setIsIOS(isIosDevice);
-
-    // Captura o evento de instalação no Android/Desktop
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
   }, []);
 
-  const handleInstallClick = async () => {
-    // Lógica para iOS (mostra instruções manuais)
+  const handleInstallClick = () => {
     if (isIOS) {
       alert("Para instalar no iOS: toque em 'Compartilhar' e depois em 'Adicionar à Tela de Início'");
       return;
     }
-
-    // Lógica para Android/Desktop
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
+    triggerInstall();
   };
 
-  if (!deferredPrompt && !isIOS) {
+  if (!installPrompt && !isIOS) {
     return null;
   }
 
   return (
     <button
       onClick={handleInstallClick}
-      className="bg-lime-500 hover:bg-lime-600 text-zinc-900 font-bold py-2 px-4 rounded-lg transition-all text-sm animate-pulse"
+      className="hidden sm:flex items-center gap-2 bg-lime-500 text-zinc-900 font-bold text-xs px-3 py-1.5 rounded-full hover:bg-lime-600 transition-colors"
+      aria-label="Instalar Aplicativo"
     >
-      Instalar Aplicativo
+      <Download size={14} />
+      <span>Instalar App</span>
     </button>
   );
 }

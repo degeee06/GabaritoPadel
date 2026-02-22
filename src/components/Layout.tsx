@@ -3,7 +3,13 @@ import React from 'react';
 import { supabase } from '../lib/supabase';
 import { InstallPWAButton } from './InstallPWAButton';
 
-export function Layout({ children }: { children: React.ReactNode }) {
+interface LayoutProps {
+  children: React.ReactNode;
+  installPrompt: any;
+  triggerInstall: () => void;
+}
+
+export function Layout({ children, installPrompt, triggerInstall }: LayoutProps) {
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -14,7 +20,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <header className="py-4 px-6 border-b border-zinc-800 flex justify-between items-center">
         <h1 className="text-xl font-bold text-lime-400">GabaritoPadel</h1>
         <div className="flex items-center gap-4">
-          <InstallPWAButton />
+          <InstallPWAButton installPrompt={installPrompt} triggerInstall={triggerInstall} />
           <button onClick={handleLogout} className="text-sm text-zinc-400 hover:text-white transition-colors">Sair</button>
         </div>
       </header>

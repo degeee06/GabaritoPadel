@@ -20,12 +20,21 @@ export function AuthPage() {
   const turnstileRef = useRef<any>(null);
 
   // Detecta se o usuário veio pelo link de recuperação de senha do e-mail
-  useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event) => {
+ useEffect(() => {
+    // 1. Verifica se a URL contém o tipo "recovery" (o link do email traz isso)
+    const hash = window.location.hash;
+    if (hash && hash.includes('type=recovery')) {
+      setMode('updatePassword');
+    }
+
+    // 2. Escuta mudanças de estado (backup caso o hash mude rápido)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
       if (event === "PASSWORD_RECOVERY") {
         setMode('updatePassword');
       }
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -16,6 +16,8 @@ export function AuthPage() {
               sign_in: {
                 email_label: 'Seu email',
                 password_label: 'Sua senha',
+                email_input_placeholder: 'Seu endereço de email',
+                password_input_placeholder: 'Sua senha',
                 button_label: 'Entrar',
                 social_provider_text: 'Entrar com {{provider}}',
                 link_text: 'Já tem uma conta? Entre',
@@ -23,6 +25,8 @@ export function AuthPage() {
               sign_up: {
                 email_label: 'Seu email',
                 password_label: 'Crie uma senha',
+                email_input_placeholder: 'Seu endereço de email',
+                password_input_placeholder: 'Sua senha',
                 button_label: 'Cadastrar',
                 social_provider_text: 'Cadastrar com {{provider}}',
                 link_text: 'Não tem uma conta? Cadastre-se',
@@ -30,6 +34,7 @@ export function AuthPage() {
               forgotten_password: {
                 email_label: 'Seu email',
                 password_label: 'Sua senha',
+                email_input_placeholder: 'Seu endereço de email',
                 button_label: 'Enviar instruções',
                 link_text: 'Esqueceu a senha?',
               },

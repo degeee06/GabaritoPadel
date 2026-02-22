@@ -154,7 +154,7 @@ export async function deleteHistory(): Promise<void> {
   }
 }
 
-export async function deleteMatchById(matchId: number): Promise<void> {
+export async function deleteMatchById(matchId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 

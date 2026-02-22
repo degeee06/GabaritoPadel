@@ -103,8 +103,8 @@ export default function App() {
     setPlan(null);
   };
 
-  const handleMatchDeleted = (matchId: number) => {
-    setMatches(matches.filter(m => parseInt(m.id, 10) !== matchId));
+  const handleMatchDeleted = (matchId: string) => {
+    setMatches(matches.filter(m => m.id !== matchId));
   };
 
   const handleUpgradeSuccess = async () => {

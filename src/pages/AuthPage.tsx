@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Turnstile } from '@marsidev/react-turnstile';
-import { Loader2, KeyRound, Mail, Lock } from 'lucide-react';
+import { Loader2, Mail, Lock } from 'lucide-react';
 
 export function AuthPage() {
   // Estados de visualização

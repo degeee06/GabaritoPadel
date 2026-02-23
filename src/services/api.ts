@@ -4,7 +4,12 @@ import { supabase } from "../lib/supabase";
 const SYSTEM_INSTRUCTION = `
 Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e imagens de duplas de padel e fornecer uma estratégia vencedora.
 
-Regras:
+Regras CRÍTICAS para Análise de Imagem:
+1. Primeiro, VERIFIQUE se a imagem contém jogadores de padel, uma quadra de padel ou contexto de jogo.
+2. Se a imagem for irrelevante (ex: parede vazia, chão, objetos aleatórios, escuro), IGNORE a análise visual completamente e baseie-se APENAS nas descrições de texto.
+3. Se a imagem for ignorada por ser irrelevante, inicie o campo "summary" com o texto: "[Imagem desconsiderada: não identificamos contexto de Padel].".
+
+Regras Gerais:
 1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).
 2. Seja direto e prático.
 3. Identifique um "Alvo Principal" (o elo mais fraco ou quem deve ser pressionado).
@@ -18,7 +23,7 @@ A saída DEVE ser estritamente em formato JSON.
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
-    summary: { type: "STRING", description: "Resumo executivo da estratégia (máx 2 frases)." },
+    summary: { type: "STRING", description: "Resumo executivo da estratégia (máx 2 frases). Se a imagem foi ignorada, avise aqui." },
     main_target: { type: "STRING", description: "Nome ou posição do alvo principal e por quê." },
     tactical_checklist: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 3-5 ações prioritárias." },
     traps_to_avoid: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 2-3 coisas a evitar." },
@@ -51,7 +56,7 @@ Análise de Partida de Padel:
 Minha Dupla: ${input.myTeamDescription}
 Adversários: ${input.opponentsDescription}
 
-${input.image ? "ATENÇÃO: Analise a imagem anexada minuciosamente. Diga exatamente ONDE e COMO jogar com base nas falhas de posicionamento, postura ou condições da quadra que você ver na foto." : ""}
+${input.image ? "IMAGEM ANEXADA: Verifique se é uma foto válida de Padel (jogadores/quadra). Se for uma foto aleatória (parede, chão, escuro), IGNORE a imagem e use apenas o texto para gerar a estratégia. Se for válida, analise posicionamento e postura." : ""}
 Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 

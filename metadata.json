@@ -1,4 +1,5 @@
 {
   "name": "GabaritoPadel",
-  "description": "An AI-powered padel strategy generator."
+  "description": "An AI-powered padel strategy generator.",
+  "requestFramePermissions": ["camera"]
 }

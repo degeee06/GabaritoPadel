@@ -54,6 +54,23 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (session && view === 'history') {
+      const loadHistory = async () => {
+        setLoading(true);
+        try {
+          const historyData = await getMatchHistory();
+          setMatches(historyData as Match[]);
+        } catch (err) {
+          setError('Falha ao carregar o histórico.');
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadHistory();
+    }
+  }, [session, view]);
+
   const fetchProfile = async () => {
     const profile = await getUserProfile();
     if (profile) setUserProfile(profile);

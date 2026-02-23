@@ -3,6 +3,7 @@ import { ArrowLeft, Target, CheckSquare, AlertTriangle, Shield, Sword, Map, Info
 import { motion } from 'framer-motion';
 import { TacticalPlan } from '../types';
 import { PositionGuide } from '../components/PositionGuide';
+import { TextToSpeechButton } from '../components/TextToSpeechButton';
 
 interface StrategyResultProps {
   plan: TacticalPlan;
@@ -32,6 +33,17 @@ export function StrategyResult({ plan, onBack }: StrategyResultProps) {
     return <PositionGuide positionId={viewGuide} onBack={() => setViewGuide(null)} />;
   }
 
+  // Prepara o texto completo para leitura
+  const fullText = `
+    Plano Tático Gerado.
+    Resumo: ${plan.summary}
+    Alvo Principal: ${plan.main_target}
+    Checklist Tático: ${plan.tactical_checklist.join('. ')}
+    Armadilhas a evitar: ${plan.traps_to_avoid.join('. ')}
+    Estratégia Ofensiva: ${plan.offensive_strategy.join('. ')}
+    Estratégia Defensiva: ${plan.defensive_strategy.join('. ')}
+  `;
+
   return (
     <div className="space-y-6">
       <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
@@ -40,7 +52,10 @@ export function StrategyResult({ plan, onBack }: StrategyResultProps) {
       </button>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-bold text-white">Plano Tático Gerado</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-white">Plano Tático Gerado</h1>
+          <TextToSpeechButton text={fullText} />
+        </div>
         <p className="text-zinc-400 mt-2 max-w-prose">{plan.summary}</p>
       </motion.div>
 

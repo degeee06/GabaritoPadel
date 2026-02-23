@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { positions } from '../data/positions';
+import { TextToSpeechButton } from './TextToSpeechButton';
 
 interface PositionGuideProps {
   positionId?: string;
@@ -33,7 +34,12 @@ export function PositionGuide({ positionId, onBack }: PositionGuideProps) {
         {selectedPositions.map((pos) => (
           <div key={pos.id} className="bg-zinc-800/50 border border-zinc-700 rounded-xl overflow-hidden">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-white mb-2">{pos.title}</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-bold text-white">{pos.title}</h3>
+                <TextToSpeechButton 
+                  text={`${pos.title}. ${pos.description}. Detalhes: ${pos.details.join('. ')}`} 
+                />
+              </div>
               <p className="text-zinc-300 mb-4">{pos.description}</p>
               
               <div className="mb-6 aspect-video bg-zinc-900 rounded-lg overflow-hidden flex items-center justify-center border border-zinc-700/50">

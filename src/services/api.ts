@@ -91,7 +91,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/deepseek-vl2-small", 
+        model: "deepseek-ai/deepseek-vl2", 
         messages: messages,
         // Parâmetro response_format removido pois causa erro 400 em modelos de visão
         temperature: 0.7, 

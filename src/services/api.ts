@@ -62,23 +62,28 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
     { role: "system", content: SYSTEM_INSTRUCTION }
   ];
 
-  const userContent: any[] = [
-    { type: "text", text: promptText }
-  ];
+  const userContent: any[] = [];
 
+  // 1. PRIMEIRO: A Imagem (Conforme documentação da SiliconFlow)
   if (input.image) {
     userContent.push({
       type: "image_url",
       image_url: {
-        url: input.image 
+        url: input.image,
+        detail: "low" // Parâmetro obrigatório adicionado
       }
     });
   }
 
+  // 2. SEGUNDO: O Texto
+  userContent.push({
+    type: "text",
+    text: promptText
+  });
+
   messages.push({ role: "user", content: userContent });
 
   try {
-    // ATENÇÃO: URL atualizada para .com conforme a documentação
     const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -88,7 +93,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
       body: JSON.stringify({
         model: "deepseek-ai/deepseek-vl2-small", 
         messages: messages,
-        response_format: { type: "json_object" },
+        // Parâmetro response_format removido pois causa erro 400 em modelos de visão
         temperature: 0.7, 
         max_tokens: 2000
       })
@@ -106,7 +111,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    // Limpeza de Markdown para evitar quebra do JSON.parse
+    // Limpeza de Markdown garantida já que não estamos mais forçando o JSON nativo da API
     const cleanJsonText = analysisText
       .replace(/```json/gi, '')
       .replace(/```/g, '')
@@ -158,7 +163,6 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    // ATENÇÃO: URL atualizada para .com conforme a documentação
     const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
       method: 'POST',
       headers: {

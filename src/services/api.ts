@@ -78,7 +78,6 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
   messages.push({ role: "user", content: userContent });
 
   try {
-    // URL atualizada para o provedor compatível com o modelo visual
     const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -86,10 +85,10 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/deepseek-vl2-small", // Modelo multimodal correto
+        model: "deepseek-ai/deepseek-vl2-small", 
         messages: messages,
         response_format: { type: "json_object" },
-        temperature: 0.7, // Reduzido levemente para garantir um JSON mais estável
+        temperature: 0.7, 
         max_tokens: 2000
       })
     });
@@ -106,19 +105,30 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    const plan = JSON.parse(analysisText) as TacticalPlan;
+    // LIMPEZA CRÍTICA DO JSON: Garante que o parse não quebre se a IA colocar ```json em volta
+    const cleanJsonText = analysisText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
 
-    // Salvar no Supabase
+    const plan = JSON.parse(cleanJsonText) as TacticalPlan;
+
+    // SALVANDO NO SUPABASE (Mapeado exatamente com a sua tabela 'matches')
     try {
-      await supabase.from('matches').insert({
+      const { error: dbError } = await supabase.from('matches').insert({
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Imagem processada na análise" : null,
-        tactical_plan: plan
+        // Não salvamos a string base64 gigante no banco para economizar espaço
+        image_url: input.image ? "Análise com imagem realizada" : null,
+        tactical_plan: plan // Seu campo jsonb lida perfeitamente com esse objeto
       });
+
+      if (dbError) throw dbError;
+
     } catch (dbError) {
       console.error("Erro ao salvar no Supabase:", dbError);
+      // Não damos throw aqui para não impedir o usuário de ver o plano caso o DB falhe
     }
 
     return plan;
@@ -149,15 +159,14 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    // URL e modelo atualizados para manter a consistência com a mesma chave de API
-    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+    const response = await fetch('[https://api.siliconflow.cn/v1/chat/completions](https://api.siliconflow.cn/v1/chat/completions)', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/DeepSeek-V3", // Modelo de texto de alta performance
+        model: "deepseek-ai/DeepSeek-V3", 
         messages: [
           { role: "system", content: "Você é um técnico de Padel experiente focado em viradas de jogo." },
           { role: "user", content: prompt }

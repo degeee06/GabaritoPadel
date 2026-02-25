@@ -104,6 +104,10 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
     const data = await response.json();
     const analysisText = data.choices?.[0]?.message?.content;
 
+    // ADICIONE ESTAS DUAS LINHAS:
+    console.log("=== RESPOSTA BRUTA DA IA ===", analysisText);
+    console.log("=== PLANO EXTRAÍDO ===", plan);
+
     if (!analysisText) {
       throw new Error("A IA não retornou nenhuma análise válida.");
     }

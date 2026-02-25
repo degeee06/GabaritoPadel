@@ -78,7 +78,8 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
   messages.push({ role: "user", content: userContent });
 
   try {
-    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+    // ATENÇÃO: URL atualizada para .com conforme a documentação
+    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    // LIMPEZA CRÍTICA DO JSON: Garante que o parse não quebre se a IA colocar ```json em volta
+    // Limpeza de Markdown para evitar quebra do JSON.parse
     const cleanJsonText = analysisText
       .replace(/```json/gi, '')
       .replace(/```/g, '')
@@ -113,22 +114,20 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
 
     const plan = JSON.parse(cleanJsonText) as TacticalPlan;
 
-    // SALVANDO NO SUPABASE (Mapeado exatamente com a sua tabela 'matches')
+    // Salvar no Supabase
     try {
       const { error: dbError } = await supabase.from('matches').insert({
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        // Não salvamos a string base64 gigante no banco para economizar espaço
         image_url: input.image ? "Análise com imagem realizada" : null,
-        tactical_plan: plan // Seu campo jsonb lida perfeitamente com esse objeto
+        tactical_plan: plan 
       });
 
       if (dbError) throw dbError;
 
     } catch (dbError) {
       console.error("Erro ao salvar no Supabase:", dbError);
-      // Não damos throw aqui para não impedir o usuário de ver o plano caso o DB falhe
     }
 
     return plan;
@@ -159,7 +158,8 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    const response = await fetch('[https://api.siliconflow.cn/v1/chat/completions](https://api.siliconflow.cn/v1/chat/completions)', {
+    // ATENÇÃO: URL atualizada para .com conforme a documentação
+    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

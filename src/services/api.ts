@@ -1,7 +1,7 @@
 import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
-// Schema para garantir que o DeepSeek entenda o formato exato
+// Schema para garantir que o modelo entenda o formato exato
 const RESPONSE_SCHEMA_JSON = {
   type: "object",
   properties: {
@@ -16,7 +16,7 @@ const RESPONSE_SCHEMA_JSON = {
 };
 
 const SYSTEM_INSTRUCTION = `
-Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais de duplas de padel e fornecer uma estratégia vencedora.
+Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e visuais de duplas de padel e fornecer uma estratégia vencedora.
 
 Regras Gerais:
 1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).
@@ -34,13 +34,12 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
-  // Alterado para DeepSeek API Key
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    console.warn("Chave de API DeepSeek não encontrada. Retornando dados simulados.");
+    console.warn("Chave de API não encontrada. Retornando dados simulados.");
     return {
-      summary: "Estratégia simulada (DeepSeek Key ausente): Foque no jogador de revés.",
+      summary: "Estratégia simulada: Foque no jogador de revés.",
       main_target: "Jogador de Revés",
       tactical_checklist: ["Usar globos fundos", "Volear curto"],
       traps_to_avoid: ["Jogar no meio"],
@@ -49,7 +48,6 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
     };
   }
 
-  // DeepSeek VL (Vision Language) para análise de imagens
   const promptText = `
 Análise de Partida de Padel:
 Minha Dupla: ${input.myTeamDescription}
@@ -72,7 +70,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
     userContent.push({
       type: "image_url",
       image_url: {
-        url: input.image // O input.image já deve ser um data URI completo (data:image/...)
+        url: input.image 
       }
     });
   }
@@ -80,24 +78,25 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
   messages.push({ role: "user", content: userContent });
 
   try {
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    // URL atualizada para o provedor compatível com o modelo visual
+    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-vl-chat", // Modelo multimodal do DeepSeek
+        model: "deepseek-ai/deepseek-vl2-small", // Modelo multimodal correto
         messages: messages,
         response_format: { type: "json_object" },
-        temperature: 1.0,
+        temperature: 0.7, // Reduzido levemente para garantir um JSON mais estável
         max_tokens: 2000
       })
     });
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(`Erro na API DeepSeek (${response.status}): ${errData.error?.message || response.statusText}`);
+      throw new Error(`Erro na API (${response.status}): ${errData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
@@ -115,7 +114,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Imagem anexada (não analisada pelo DeepSeek)" : null,
+        image_url: input.image ? "Imagem processada na análise" : null,
         tactical_plan: plan
       });
     } catch (dbError) {
@@ -150,23 +149,24 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+    // URL e modelo atualizados para manter a consistência com a mesma chave de API
+    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: "deepseek-ai/DeepSeek-V3", // Modelo de texto de alta performance
         messages: [
           { role: "system", content: "Você é um técnico de Padel experiente focado em viradas de jogo." },
           { role: "user", content: prompt }
         ],
-        temperature: 1.0
+        temperature: 0.8
       })
     });
 
-    if (!response.ok) throw new Error('Erro na API DeepSeek');
+    if (!response.ok) throw new Error('Erro na API');
 
     const data = await response.json();
     const tip = data.choices?.[0]?.message?.content;

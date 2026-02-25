@@ -58,30 +58,28 @@ ${input.image ? "IMAGEM ANEXADA: Analise a postura, posicionamento e condições
 Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritamente em JSON.
   `;
 
-  const messages: any[] = [
-    { role: "system", content: SYSTEM_INSTRUCTION }
-  ];
-
+  // Montagem do conteúdo (Imagem SEMPRE primeiro, conforme documentação)
   const userContent: any[] = [];
 
-  // 1. PRIMEIRO: A Imagem (Conforme documentação da SiliconFlow)
   if (input.image) {
     userContent.push({
       type: "image_url",
       image_url: {
         url: input.image,
-        detail: "low" // Parâmetro obrigatório adicionado
+        detail: "low" // Essencial para evitar erros de tamanho/formato na API
       }
     });
   }
 
-  // 2. SEGUNDO: O Texto
+  // Juntamos a Regra de Sistema com o Texto para evitar o erro 400 dos modelos de Visão
   userContent.push({
     type: "text",
-    text: promptText
+    text: `${SYSTEM_INSTRUCTION}\n\n${promptText}`
   });
 
-  messages.push({ role: "user", content: userContent });
+  const messages: any[] = [
+    { role: "user", content: userContent }
+  ];
 
   try {
     const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
@@ -91,9 +89,8 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/deepseek-vl2", 
+        model: "deepseek-ai/deepseek-vl2", // Nome exato e atualizado do modelo
         messages: messages,
-        // Parâmetro response_format removido pois causa erro 400 em modelos de visão
         temperature: 0.7, 
         max_tokens: 2000
       })
@@ -111,13 +108,27 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    // Limpeza de Markdown garantida já que não estamos mais forçando o JSON nativo da API
-    const cleanJsonText = analysisText
-      .replace(/```json/gi, '')
-      .replace(/```/g, '')
-      .trim();
+    // 1. Extração Inteligente: Pega apenas o JSON, ignorando conversas extras
+    const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+    const cleanJsonText = jsonMatch ? jsonMatch[0] : analysisText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
-    const plan = JSON.parse(cleanJsonText) as TacticalPlan;
+    let parsedData: any = {};
+    try {
+      parsedData = JSON.parse(cleanJsonText);
+    } catch (e) {
+      console.error("Erro no Parse do JSON:", cleanJsonText);
+      throw new Error("A IA enviou os dados em um formato bagunçado. Tente gerar novamente.");
+    }
+
+    // 2. A "ARMADURA": Garante que o Front-end não quebre (Cannot read properties of undefined reading 'join')
+    const plan: TacticalPlan = {
+      summary: parsedData.summary || "Estratégia analisada com sucesso.",
+      main_target: parsedData.main_target || "Não especificado pela IA.",
+      tactical_checklist: Array.isArray(parsedData.tactical_checklist) ? parsedData.tactical_checklist : [],
+      traps_to_avoid: Array.isArray(parsedData.traps_to_avoid) ? parsedData.traps_to_avoid : [],
+      offensive_strategy: Array.isArray(parsedData.offensive_strategy) ? parsedData.offensive_strategy : [],
+      defensive_strategy: Array.isArray(parsedData.defensive_strategy) ? parsedData.defensive_strategy : [],
+    };
 
     // Salvar no Supabase
     try {

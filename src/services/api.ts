@@ -1,7 +1,7 @@
 import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
-// Schema para garantir que o modelo entenda o formato exato
+// Schema para garantir que o DeepSeek entenda o formato exato
 const RESPONSE_SCHEMA_JSON = {
   type: "object",
   properties: {
@@ -16,7 +16,7 @@ const RESPONSE_SCHEMA_JSON = {
 };
 
 const SYSTEM_INSTRUCTION = `
-Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e visuais de duplas de padel e fornecer uma estratégia vencedora.
+Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais de duplas de padel e fornecer uma estratégia vencedora.
 
 Regras Gerais:
 1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).
@@ -34,12 +34,13 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
+  // Alterado para DeepSeek API Key
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    console.warn("Chave de API não encontrada. Retornando dados simulados.");
+    console.warn("Chave de API DeepSeek não encontrada. Retornando dados simulados.");
     return {
-      summary: "Estratégia simulada: Foque no jogador de revés.",
+      summary: "Estratégia simulada (DeepSeek Key ausente): Foque no jogador de revés.",
       main_target: "Jogador de Revés",
       tactical_checklist: ["Usar globos fundos", "Volear curto"],
       traps_to_avoid: ["Jogar no meio"],
@@ -48,104 +49,58 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
     };
   }
 
-  const promptText = `
+  // SiliconFlow API (DeepSeek Provider)
+  const prompt = `
 Análise de Partida de Padel:
 Minha Dupla: ${input.myTeamDescription}
 Adversários: ${input.opponentsDescription}
 
-${input.image ? "IMAGEM ANEXADA: Analise a postura, posicionamento e condições da quadra na imagem." : ""}
+${input.image ? "[NOTA: O usuário anexou uma imagem, mas a análise será baseada nas descrições acima.]" : ""}
 
 Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritamente em JSON.
   `;
 
-  // Montagem do conteúdo (Imagem SEMPRE primeiro, conforme documentação)
-  const userContent: any[] = [];
-
-  if (input.image) {
-    userContent.push({
-      type: "image_url",
-      image_url: {
-        url: input.image,
-        detail: "low" // Essencial para evitar erros de tamanho/formato na API
-      }
-    });
-  }
-
-  // Juntamos a Regra de Sistema com o Texto para evitar o erro 400 dos modelos de Visão
-  userContent.push({
-    type: "text",
-    text: `${SYSTEM_INSTRUCTION}\n\n${promptText}`
-  });
-
-  const messages: any[] = [
-    { role: "user", content: userContent }
-  ];
-
   try {
-    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
+    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/deepseek-vl2", // Nome exato e atualizado do modelo
-        messages: messages,
-        temperature: 0.7, 
-        max_tokens: 2000
+        model: "deepseek-ai/DeepSeek-V3",
+        messages: [
+          { role: "system", content: SYSTEM_INSTRUCTION },
+          { role: "user", content: prompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7
       })
     });
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(`Erro na API (${response.status}): ${errData.error?.message || response.statusText}`);
+      throw new Error(`Erro na API DeepSeek (${response.status}): ${errData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
     const analysisText = data.choices?.[0]?.message?.content;
 
-    // ADICIONE ESTAS DUAS LINHAS:
-    console.log("=== RESPOSTA BRUTA DA IA ===", analysisText);
-    console.log("=== PLANO EXTRAÍDO ===", plan);
-
     if (!analysisText) {
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    // 1. Extração Inteligente: Pega apenas o JSON, ignorando conversas extras
-    const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-    const cleanJsonText = jsonMatch ? jsonMatch[0] : analysisText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-    let parsedData: any = {};
-    try {
-      parsedData = JSON.parse(cleanJsonText);
-    } catch (e) {
-      console.error("Erro no Parse do JSON:", cleanJsonText);
-      throw new Error("A IA enviou os dados em um formato bagunçado. Tente gerar novamente.");
-    }
-
-    // 2. A "ARMADURA": Garante que o Front-end não quebre (Cannot read properties of undefined reading 'join')
-    const plan: TacticalPlan = {
-      summary: parsedData.summary || "Estratégia analisada com sucesso.",
-      main_target: parsedData.main_target || "Não especificado pela IA.",
-      tactical_checklist: Array.isArray(parsedData.tactical_checklist) ? parsedData.tactical_checklist : [],
-      traps_to_avoid: Array.isArray(parsedData.traps_to_avoid) ? parsedData.traps_to_avoid : [],
-      offensive_strategy: Array.isArray(parsedData.offensive_strategy) ? parsedData.offensive_strategy : [],
-      defensive_strategy: Array.isArray(parsedData.defensive_strategy) ? parsedData.defensive_strategy : [],
-    };
+    const plan = JSON.parse(analysisText) as TacticalPlan;
 
     // Salvar no Supabase
     try {
-      const { error: dbError } = await supabase.from('matches').insert({
+      await supabase.from('matches').insert({
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Análise com imagem realizada" : null,
-        tactical_plan: plan 
+        image_url: input.image ? "Imagem anexada (não analisada pelo DeepSeek)" : null,
+        tactical_plan: plan
       });
-
-      if (dbError) throw dbError;
-
     } catch (dbError) {
       console.error("Erro ao salvar no Supabase:", dbError);
     }
@@ -178,23 +133,23 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
+    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-ai/DeepSeek-V3", 
+        model: "deepseek-ai/DeepSeek-V3",
         messages: [
           { role: "system", content: "Você é um técnico de Padel experiente focado em viradas de jogo." },
           { role: "user", content: prompt }
         ],
-        temperature: 0.8
+        temperature: 0.7
       })
     });
 
-    if (!response.ok) throw new Error('Erro na API');
+    if (!response.ok) throw new Error('Erro na API DeepSeek');
 
     const data = await response.json();
     const tip = data.choices?.[0]?.message?.content;

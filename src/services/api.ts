@@ -1,13 +1,22 @@
 import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
-const SYSTEM_INSTRUCTION = `
-Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e imagens de duplas de padel e fornecer uma estratégia vencedora.
+// Schema para garantir que o DeepSeek entenda o formato exato
+const RESPONSE_SCHEMA_JSON = {
+  type: "object",
+  properties: {
+    summary: { type: "string", description: "Resumo executivo da estratégia (máx 2 frases)." },
+    main_target: { type: "string", description: "Nome ou posição do alvo principal e por quê." },
+    tactical_checklist: { type: "array", items: { type: "string" }, description: "Lista de 3-5 ações prioritárias." },
+    traps_to_avoid: { type: "array", items: { type: "string" }, description: "Lista de 2-3 coisas a evitar." },
+    offensive_strategy: { type: "array", items: { type: "string" }, description: "Dicas de ataque." },
+    defensive_strategy: { type: "array", items: { type: "string" }, description: "Dicas de defesa." },
+  },
+  required: ["summary", "main_target", "tactical_checklist", "traps_to_avoid", "offensive_strategy", "defensive_strategy"],
+};
 
-Regras CRÍTICAS para Análise de Imagem:
-1. Primeiro, VERIFIQUE se a imagem contém jogadores de padel, uma quadra de padel ou contexto de jogo.
-2. Se a imagem for irrelevante (ex: parede vazia, chão, objetos aleatórios, escuro), IGNORE a análise visual completamente e baseie-se APENAS nas descrições de texto.
-3. Se a imagem for ignorada por ser irrelevante, inicie o campo "summary" com o texto: "[Imagem desconsiderada: não identificamos contexto de Padel].".
+const SYSTEM_INSTRUCTION = `
+Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais de duplas de padel e fornecer uma estratégia vencedora.
 
 Regras Gerais:
 1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).
@@ -16,33 +25,22 @@ Regras Gerais:
 4. Crie um checklist tático claro.
 5. Identifique armadilhas a evitar.
 
-A saída DEVE ser estritamente em formato JSON.
+FORMATO DE RESPOSTA OBRIGATÓRIO (JSON):
+Você deve responder APENAS com um objeto JSON válido seguindo exatamente esta estrutura:
+${JSON.stringify(RESPONSE_SCHEMA_JSON, null, 2)}
 `;
-
-// Como tiramos o SDK, escrevemos o Schema em formato JSON puro
-const RESPONSE_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    summary: { type: "STRING", description: "Resumo executivo da estratégia (máx 2 frases). Se a imagem foi ignorada, avise aqui." },
-    main_target: { type: "STRING", description: "Nome ou posição do alvo principal e por quê." },
-    tactical_checklist: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 3-5 ações prioritárias." },
-    traps_to_avoid: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 2-3 coisas a evitar." },
-    offensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de ataque." },
-    defensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de defesa." },
-  },
-  required: ["summary", "main_target", "tactical_checklist", "traps_to_avoid", "offensive_strategy", "defensive_strategy"],
-};
 
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  // Alterado para DeepSeek API Key
+  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    console.warn("Chave de API não encontrada. Retornando dados simulados.");
+    console.warn("Chave de API DeepSeek não encontrada. Retornando dados simulados.");
     return {
-      summary: "Estratégia simulada: Foque no jogador de revés que tem problemas com bolas altas.",
+      summary: "Estratégia simulada (DeepSeek Key ausente): Foque no jogador de revés.",
       main_target: "Jogador de Revés",
       tactical_checklist: ["Usar globos fundos", "Volear curto"],
       traps_to_avoid: ["Jogar no meio"],
@@ -51,53 +49,59 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
     };
   }
 
-  const prompt = `
+  // DeepSeek VL (Vision Language) para análise de imagens
+  const promptText = `
 Análise de Partida de Padel:
 Minha Dupla: ${input.myTeamDescription}
 Adversários: ${input.opponentsDescription}
 
-${input.image ? "IMAGEM ANEXADA: Verifique se é uma foto válida de Padel (jogadores/quadra). Se for uma foto aleatória (parede, chão, escuro), IGNORE a imagem e use apenas o texto para gerar a estratégia. Se for válida, analise posicionamento e postura." : ""}
-Gere um plano tático vencedor, direto ao ponto e altamente acionável.
+${input.image ? "IMAGEM ANEXADA: Analise a postura, posicionamento e condições da quadra na imagem." : ""}
+
+Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritamente em JSON.
   `;
 
-  // Montando as partes do conteúdo (Texto + Imagem se houver)
-  const parts: any[] = [{ text: prompt }];
-  
+  const messages: any[] = [
+    { role: "system", content: SYSTEM_INSTRUCTION }
+  ];
+
+  const userContent: any[] = [
+    { type: "text", text: promptText }
+  ];
+
   if (input.image) {
-    parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: input.image.split(',')[1] // Limpa o prefixo do base64
+    userContent.push({
+      type: "image_url",
+      image_url: {
+        url: input.image // O input.image já deve ser um data URI completo (data:image/...)
       }
     });
   }
 
+  messages.push({ role: "user", content: userContent });
+
   try {
-    // Chamada REST direta igual ao projeto Arranchou
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }]
-        },
-        contents: [{ parts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA
-        }
+        model: "deepseek-vl-chat", // Modelo multimodal do DeepSeek
+        messages: messages,
+        response_format: { type: "json_object" },
+        temperature: 1.0,
+        max_tokens: 2000
       })
     });
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(`Erro na API Gemini (${response.status}): ${errData.error?.message || response.statusText}`);
+      throw new Error(`Erro na API DeepSeek (${response.status}): ${errData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
-    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const analysisText = data.choices?.[0]?.message?.content;
 
     if (!analysisText) {
       throw new Error("A IA não retornou nenhuma análise válida.");
@@ -111,7 +115,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Imagem anexada na análise" : null,
+        image_url: input.image ? "Imagem anexada (não analisada pelo DeepSeek)" : null,
         tactical_plan: plan
       });
     } catch (dbError) {
@@ -130,10 +134,10 @@ export async function generatePanicTip(score: string, problem: string): Promise<
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    return "Dica simulada: Jogue bolas altas no meio e respire fundo. Quebre o ritmo deles.";
+    return "Dica simulada: Jogue bolas altas no meio e respire fundo.";
   }
 
   const prompt = `
@@ -146,18 +150,26 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: "Você é um técnico de Padel experiente focado em viradas de jogo." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 1.0
       })
     });
 
-    if (!response.ok) throw new Error('Erro na API Gemini');
+    if (!response.ok) throw new Error('Erro na API DeepSeek');
 
     const data = await response.json();
-    const tip = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const tip = data.choices?.[0]?.message?.content;
 
     return tip || "Mantenha a calma e foque em colocar a bola em jogo.";
 

@@ -60,16 +60,14 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
   // Montando as partes do conteúdo (Texto + Imagem se houver)
-  // Usamos "any" aqui, mas você pode tipar conforme a doc do Gemini caso tenha as interfaces
- // Montando as partes do conteúdo (Texto + Imagem se houver)
   const parts: any[] = [{ text: prompt }];
   
   if (input.image) {
-    // Tratamento seguro do Base64 para evitar o Erro 400
+    // Tratamento seguro do Base64 (Isso resolve o Erro 400)
     let mimeType = "image/jpeg";
     let base64Data = input.image;
 
-    // Verifica se a imagem veio com o prefixo Data URI (ex: data:image/png;base64,...)
+    // Se a imagem vier com o prefixo "data:image/jpeg;base64,"
     if (input.image.includes(',')) {
       const extractedMime = input.image.substring(input.image.indexOf(':') + 1, input.image.indexOf(';'));
       mimeType = extractedMime || "image/jpeg";
@@ -85,8 +83,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   }
 
   try {
-    // Usando gemini-1.5-flash-latest para corrigir o Erro 404
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -103,7 +100,6 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
         }
       })
     });
-
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
@@ -160,14 +156,13 @@ Máximo de 2 frases. Seja motivador mas técnico.
   `;
 
   try {
-    // Também ajustado para o gemini-1.5-flash para economia e velocidade em dicas curtas
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.7 // Um pouco mais alto para frases motivacionais
+          temperature: 0.7
         }
       })
     });
@@ -185,7 +180,6 @@ Máximo de 2 frases. Seja motivador mas técnico.
   }
 }
 
-// getMatchHistory, deleteHistory e deleteMatchById permanecem inalterados...
 export async function getMatchHistory(): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];

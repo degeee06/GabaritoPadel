@@ -45,7 +45,7 @@ export function StrategyResult({ plan, onBack }: StrategyResultProps) {
   `;
 
   const handleShare = async () => {
-    const text = `🎾 *GabaritoPadel - Estratégia Vencedora* 🎾\n\n🎯 *Alvo:* ${plan.main_target}\n\n📝 *Resumo:* ${plan.summary}\n\n✅ *Checklist:*\n${plan.tactical_checklist.map(i => `• ${i}`).join('\n')}\n\n🚀 Gere sua estratégia em: gabaritopadel.app`;
+    const text = `🎾 *GabaritoPadel - Estratégia Vencedora* 🎾\n\n🎯 *Alvo:* ${plan.main_target}\n\n📝 *Resumo:* ${plan.summary}\n\n✅ *Checklist:*\n${plan.tactical_checklist.map(i => `• ${i}`).join('\n')}\n\n🚀 Gere sua estratégia em: gabaritopadel.vercel.app`;
 
     if (navigator.share) {
       try {

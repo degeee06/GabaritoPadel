@@ -19,7 +19,6 @@ Regras Gerais:
 A saída DEVE ser estritamente em formato JSON.
 `;
 
-// Como tiramos o SDK, escrevemos o Schema em formato JSON puro
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
@@ -33,6 +32,7 @@ const RESPONSE_SCHEMA = {
   required: ["summary", "main_target", "tactical_checklist", "traps_to_avoid", "offensive_strategy", "defensive_strategy"],
 };
 
+// --- FUNÇÃO PARA O PLANO TÁTICO COMPLETO ---
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
@@ -40,137 +40,104 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    console.warn("Chave de API não encontrada. Retornando dados simulados.");
     return {
-      summary: "Estratégia simulada: Foque no jogador de revés que tem problemas com bolas altas.",
+      summary: "Modo Simulação: Chave de API não configurada.",
       main_target: "Jogador de Revés",
-      tactical_checklist: ["Usar globos fundos", "Volear curto"],
-      traps_to_avoid: ["Jogar no meio"],
-      offensive_strategy: ["Bandeja no rincón"],
-      defensive_strategy: ["Lob cruzado"],
+      tactical_checklist: ["Usar globos fundos", "Volear no pé"],
+      traps_to_avoid: ["Evitar bolas no meio"],
+      offensive_strategy: ["Bandeja firme"],
+      defensive_strategy: ["Chiquita no centro"],
     };
   }
 
   const prompt = `
-Análise de Partida de Padel:
-Minha Dupla: ${input.myTeamDescription}
-Adversários: ${input.opponentsDescription}
-
-${input.image ? "IMAGEM ANEXADA: Verifique se é uma foto válida de Padel (jogadores/quadra). Se for uma foto aleatória (parede, chão, escuro), IGNORE a imagem e use apenas o texto para gerar a estratégia. Se for válida, analise posicionamento e postura." : ""}
-Gere um plano tático vencedor, direto ao ponto e altamente acionável.
+    Análise de Partida de Padel:
+    Minha Dupla: ${input.myTeamDescription}
+    Adversários: ${input.opponentsDescription}
+    ${input.image ? "IMAGEM ANEXADA: Analise posicionamento e postura se a foto for válida." : ""}
   `;
 
-  // Montando as partes do conteúdo (Texto + Imagem se houver)
   const parts: any[] = [{ text: prompt }];
-  
   if (input.image) {
     parts.push({
-      inlineData: {
-        mimeType: "image/jpeg",
-        data: input.image.split(',')[1] // Limpa o prefixo do base64
-      }
+      inlineData: { mimeType: "image/jpeg", data: input.image.split(',')[1] }
     });
   }
 
   try {
-    // Chamada REST direta igual ao projeto Arranchou
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }]
-        },
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
         contents: [{ parts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA
-        }
+        generationConfig: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA }
       })
     });
 
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(`Erro na API Gemini (${response.status}): ${errData.error?.message || response.statusText}`);
-    }
-
     const data = await response.json();
-    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const plan = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text) as TacticalPlan;
 
-    if (!analysisText) {
-      throw new Error("A IA não retornou nenhuma análise válida.");
-    }
-
-    const plan = JSON.parse(analysisText) as TacticalPlan;
-
-    // Salvar no Supabase
-    try {
-      await supabase.from('matches').insert({
-        user_id: user.id,
-        my_team_description: input.myTeamDescription,
-        opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Imagem anexada na análise" : null,
-        tactical_plan: plan
-      });
-    } catch (dbError) {
-      console.error("Erro ao salvar no Supabase:", dbError);
-    }
+    await supabase.from('matches').insert({
+      user_id: user.id,
+      my_team_description: input.myTeamDescription,
+      opponents_description: input.opponentsDescription,
+      tactical_plan: plan
+    });
 
     return plan;
-
   } catch (error) {
     console.error("Erro ao gerar plano:", error);
     throw error;
   }
 }
 
+// --- FUNÇÃO PARA O MODO PÂNICO (CORREÇÃO DO ERRO 230) ---
+export async function generatePanicTip(input: MatchInput): Promise<{ tip: string }> {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  
+  const PANIC_SYSTEM = `
+    Você é o "GabaritoPadel" em modo emergência. 
+    Dê UMA dica curta (máx 12 palavras) para virar o jogo agora. 
+    Seja agressivo e use termos do padel.
+    Saída: JSON { "tip": "sua dica" }
+  `;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: PANIC_SYSTEM }] },
+        contents: [{ parts: [{ text: `PERDENDO! Nós: ${input.myTeamDescription}. Eles: ${input.opponentsDescription}` }] }],
+        generationConfig: { 
+            responseMimeType: "application/json",
+            responseSchema: { type: "OBJECT", properties: { tip: { type: "STRING" } }, required: ["tip"] }
+        }
+      })
+    });
+
+    const data = await response.json();
+    return JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
+  } catch (error) {
+    return { tip: "Jogue no centro, feche a rede e recupere a confiança!" };
+  }
+}
+
+// --- FUNÇÕES DE HISTÓRICO ---
 export async function getMatchHistory(): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-
-  const { data, error } = await supabase
-    .from('matches')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Erro ao buscar histórico:', error);
-    throw error;
-  }
-
+  const { data } = await supabase.from('matches').select('*').order('created_at', { ascending: false });
   return data || [];
 }
 
 export async function deleteHistory(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado.');
-
-  const { error } = await supabase
-    .from('matches')
-    .delete()
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('Erro ao excluir histórico:', error);
-    throw error;
-  }
+  if (user) await supabase.from('matches').delete().eq('user_id', user.id);
 }
 
 export async function deleteMatchById(matchId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado.');
-
-  const { error } = await supabase
-    .from('matches')
-    .delete()
-    .eq('id', matchId)
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error('Erro ao excluir partida:', error);
-    throw error;
-  }
+  if (user) await supabase.from('matches').delete().eq('id', matchId).eq('user_id', user.id);
 }

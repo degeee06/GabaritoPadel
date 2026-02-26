@@ -13,6 +13,7 @@ import { Session } from '@supabase/supabase-js';
 import { PositionGuide } from './components/PositionGuide';
 import { ServeGuide } from './components/ServeGuide';
 import { UpgradeModal } from './components/UpgradeModal';
+import { PanicMode } from './components/PanicMode';
 import { getUserProfile, incrementUsageCount } from './services/payment';
 import { usePWAInstall } from './hooks/usePWAInstall';
 
@@ -20,7 +21,7 @@ type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
-  const [isRecovering, setIsRecovering] = useState(false); // NOVO
+  const [isRecovering, setIsRecovering] = useState(false);
   const [view, setView] = useState<ViewState>('dashboard');
   const [plan, setPlan] = useState<TacticalPlan | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -28,6 +29,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<{ plan: string, usage_count: number } | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showPanicMode, setShowPanicMode] = useState(false);
   const { installPrompt, triggerInstall } = usePWAInstall();
 
   useEffect(() => {
@@ -111,6 +113,7 @@ export default function App() {
           onViewHistory={() => handleNavigation('history')} 
           onViewGuide={() => handleNavigation('guide')}
           onViewServeGuide={() => handleNavigation('serve-guide')}
+          onPanicMode={() => setShowPanicMode(true)}
         />;
       case 'history':
         return <HistoryPage matches={matches} onMatchSelect={(m) => { setPlan(m.tactical_plan); setView('result'); }} onNewMatch={() => handleNavigation('form')} onMatchDeleted={(id) => setMatches(matches.filter(m => m.id !== id))} />;
@@ -144,6 +147,10 @@ export default function App() {
       )}
 
       {renderContent()}
+
+      {showPanicMode && (
+        <PanicMode onClose={() => setShowPanicMode(false)} />
+      )}
 
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} onSuccess={async () => { setShowUpgradeModal(false); await fetchProfile(); }} />

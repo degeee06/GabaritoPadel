@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Target, CheckSquare, AlertTriangle, Shield, Sword, Map, Info } from 'lucide-react';
+import { ArrowLeft, Target, CheckSquare, AlertTriangle, Shield, Sword, Map, Info, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { TacticalPlan } from '../types';
 import { PositionGuide } from '../components/PositionGuide';
@@ -44,12 +44,36 @@ export function StrategyResult({ plan, onBack }: StrategyResultProps) {
     Estratégia Defensiva: ${plan.defensive_strategy.join('. ')}
   `;
 
+  const handleShare = async () => {
+    const text = `🎾 *GabaritoPadel - Estratégia Vencedora* 🎾\n\n🎯 *Alvo:* ${plan.main_target}\n\n📝 *Resumo:* ${plan.summary}\n\n✅ *Checklist:*\n${plan.tactical_checklist.map(i => `• ${i}`).join('\n')}\n\n🚀 Gere sua estratégia em: gabaritopadel.app`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Minha Estratégia de Padel',
+          text: text,
+        });
+      } catch (err) {
+        console.log('Erro ao compartilhar', err);
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Estratégia copiada para a área de transferência!');
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
-        <ArrowLeft className="w-5 h-5" />
-        Voltar e Editar
-      </button>
+      <div className="flex justify-between items-center">
+        <button onClick={onBack} className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors">
+          <ArrowLeft className="w-5 h-5" />
+          Voltar e Editar
+        </button>
+        <button onClick={handleShare} className="flex items-center gap-2 text-lime-400 hover:text-lime-300 transition-colors">
+          <Share2 className="w-5 h-5" />
+          <span className="text-sm font-bold">Compartilhar</span>
+        </button>
+      </div>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">

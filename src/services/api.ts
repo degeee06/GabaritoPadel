@@ -61,12 +61,20 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
 
   // Montando as partes do conteúdo (Texto + Imagem se houver)
   // Usamos "any" aqui, mas você pode tipar conforme a doc do Gemini caso tenha as interfaces
+ // Montando as partes do conteúdo (Texto + Imagem se houver)
   const parts: any[] = [{ text: prompt }];
   
   if (input.image) {
-    // Extrai dinamicamente o MimeType do Base64 (ex: image/png, image/jpeg, image/webp)
-    const mimeType = input.image.substring(input.image.indexOf(':') + 1, input.image.indexOf(';')) || "image/jpeg";
-    const base64Data = input.image.split(',')[1];
+    // Tratamento seguro do Base64 para evitar o Erro 400
+    let mimeType = "image/jpeg";
+    let base64Data = input.image;
+
+    // Verifica se a imagem veio com o prefixo Data URI (ex: data:image/png;base64,...)
+    if (input.image.includes(',')) {
+      const extractedMime = input.image.substring(input.image.indexOf(':') + 1, input.image.indexOf(';'));
+      mimeType = extractedMime || "image/jpeg";
+      base64Data = input.image.split(',')[1];
+    }
 
     parts.push({
       inlineData: {
@@ -77,8 +85,8 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   }
 
   try {
-    // Utilizando o gemini-1.5-flash (O melhor modelo Custo/Benefício com suporte Multimodal)
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // Usando gemini-1.5-flash-latest para corrigir o Erro 404
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -91,10 +99,11 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: RESPONSE_SCHEMA,
-          temperature: 0.4 // Temperatura ligeiramente baixa para manter a análise focada e técnica
+          temperature: 0.4
         }
       })
     });
+
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));

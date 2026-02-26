@@ -1,35 +1,48 @@
 import { MatchInput, TacticalPlan } from "../types";
 import { supabase } from "../lib/supabase";
 
-// Instrução do sistema atualizada para forçar o JSON exato e evitar que a IA converse
 const SYSTEM_INSTRUCTION = `
-Você é o "GabaritoPadel", um técnico de bolso de elite. Analise as descrições e a imagem da quadra para criar uma estratégia.
+Você é o "GabaritoPadel", um técnico de bolso de elite. Seu objetivo é analisar descrições textuais e imagens de duplas de padel e fornecer uma estratégia vencedora.
 
-REGRAS CRUCIAIS:
-1. IDIOMA: Responda TODO o conteúdo dos textos em PORTUGUÊS DO BRASIL. Nunca use chinês ou inglês nos valores.
-2. TERMINOLOGIA: Use termos do padel (bandeja, vibora, chiquita, globo, etc.).
-3. FORMATO: Responda APENAS com o objeto JSON abaixo. Sem textos extras.
+Regras CRÍTICAS para Análise de Imagem:
+1. Primeiro, VERIFIQUE se a imagem contém jogadores de padel, uma quadra de padel ou contexto de jogo.
+2. Se a imagem for irrelevante (ex: parede vazia, chão, objetos aleatórios, escuro), IGNORE a análise visual completamente e baseie-se APENAS nas descrições de texto.
+3. Se a imagem for ignorada por ser irrelevante, inicie o campo "summary" com o texto: "[Imagem desconsiderada: não identificamos contexto de Padel].".
 
-{
-  "summary": "Resumo em português (2 frases)",
-  "main_target": "Nome/posição do alvo em português",
-  "tactical_checklist": ["Ação 1 em português", "Ação 2", "Ação 3"],
-  "traps_to_avoid": ["Evitar X em português", "Evitar Y"],
-  "offensive_strategy": ["Dica de ataque em português", "Dica 2"],
-  "defensive_strategy": ["Dica de defesa em português", "Dica 2"]
-}
+Regras Gerais:
+1. Use terminologia correta (bandeja, víbora, chiquita, globo, rincón, etc.).
+2. Seja direto e prático.
+3. Identifique um "Alvo Principal" (o elo mais fraco ou quem deve ser pressionado).
+4. Crie um checklist tático claro.
+5. Identifique armadilhas a evitar.
+
+A saída DEVE ser estritamente em formato JSON.
 `;
+
+// Como tiramos o SDK, escrevemos o Schema em formato JSON puro
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    summary: { type: "STRING", description: "Resumo executivo da estratégia (máx 2 frases). Se a imagem foi ignorada, avise aqui." },
+    main_target: { type: "STRING", description: "Nome ou posição do alvo principal e por quê." },
+    tactical_checklist: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 3-5 ações prioritárias." },
+    traps_to_avoid: { type: "ARRAY", items: { type: "STRING" }, description: "Lista de 2-3 coisas a evitar." },
+    offensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de ataque." },
+    defensive_strategy: { type: "ARRAY", items: { type: "STRING" }, description: "Dicas de defesa." },
+  },
+  required: ["summary", "main_target", "tactical_checklist", "traps_to_avoid", "offensive_strategy", "defensive_strategy"],
+};
 
 export async function generateTacticalPlan(input: MatchInput): Promise<TacticalPlan> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Usuário não autenticado.');
 
-  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey || apiKey.includes('PLACEHOLDER')) {
     console.warn("Chave de API não encontrada. Retornando dados simulados.");
     return {
-      summary: "Estratégia simulada: Foque no jogador de revés.",
+      summary: "Estratégia simulada: Foque no jogador de revés que tem problemas com bolas altas.",
       main_target: "Jogador de Revés",
       tactical_checklist: ["Usar globos fundos", "Volear curto"],
       traps_to_avoid: ["Jogar no meio"],
@@ -38,110 +51,69 @@ export async function generateTacticalPlan(input: MatchInput): Promise<TacticalP
     };
   }
 
-  const promptText = `
+  const prompt = `
 Análise de Partida de Padel:
 Minha Dupla: ${input.myTeamDescription}
 Adversários: ${input.opponentsDescription}
 
-${input.image ? "IMAGEM ANEXADA: Analise a postura, posicionamento e condições da quadra na imagem." : ""}
-
-Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritamente em JSON.
+${input.image ? "IMAGEM ANEXADA: Verifique se é uma foto válida de Padel (jogadores/quadra). Se for uma foto aleatória (parede, chão, escuro), IGNORE a imagem e use apenas o texto para gerar a estratégia. Se for válida, analise posicionamento e postura." : ""}
+Gere um plano tático vencedor, direto ao ponto e altamente acionável.
   `;
 
-  // Montagem do conteúdo (Imagem SEMPRE primeiro, conforme documentação)
-  const userContent: any[] = [];
-
+  // Montando as partes do conteúdo (Texto + Imagem se houver)
+  const parts: any[] = [{ text: prompt }];
+  
   if (input.image) {
-    userContent.push({
-      type: "image_url",
-      image_url: {
-        url: input.image,
-        detail: "low" // Essencial para evitar erros de tamanho/formato na API
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: input.image.split(',')[1] // Limpa o prefixo do base64
       }
     });
   }
 
-  // Juntamos a Regra de Sistema com o Texto para evitar o erro 400 dos modelos de Visão
-  userContent.push({
-    type: "text",
-    text: `${SYSTEM_INSTRUCTION}\n\n${promptText}`
-  });
-
-  const messages: any[] = [
-    { role: "user", content: userContent }
-  ];
-
   try {
-    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
+    // Chamada REST direta igual ao projeto Arranchou
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "deepseek-ai/deepseek-vl2", // Nome exato e atualizado do modelo
-        messages: messages,
-        temperature: 0.7, 
-        max_tokens: 2000
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTION }]
+        },
+        contents: [{ parts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA
+        }
       })
     });
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(`Erro na API (${response.status}): ${errData.error?.message || response.statusText}`);
+      throw new Error(`Erro na API Gemini (${response.status}): ${errData.error?.message || response.statusText}`);
     }
 
     const data = await response.json();
-    const analysisText = data.choices?.[0]?.message?.content;
+    const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!analysisText) {
       throw new Error("A IA não retornou nenhuma análise válida.");
     }
 
-    // Console log para você monitorar exatamente o que a IA respondeu
-    console.log("=== RESPOSTA BRUTA DA IA ===", analysisText);
-
-    // Extrator brutal: Pega rigorosamente do primeiro '{' até o último '}'
-    let cleanJsonText = analysisText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const startIndex = cleanJsonText.indexOf('{');
-    const endIndex = cleanJsonText.lastIndexOf('}');
-    
-    if (startIndex !== -1 && endIndex !== -1) {
-      cleanJsonText = cleanJsonText.substring(startIndex, endIndex + 1);
-    }
-
-    let parsedData: any = {};
-    try {
-      parsedData = JSON.parse(cleanJsonText);
-    } catch (e) {
-      console.error("Erro no Parse do JSON:", cleanJsonText);
-      throw new Error("A IA enviou os dados em um formato bagunçado. Tente gerar novamente.");
-    }
-
-    // A "ARMADURA": Garante que o Front-end não quebre (Cannot read properties of undefined reading 'join')
-    const plan: TacticalPlan = {
-      summary: parsedData.summary || "Estratégia analisada com sucesso.",
-      main_target: parsedData.main_target || "Não especificado pela IA.",
-      tactical_checklist: Array.isArray(parsedData.tactical_checklist) ? parsedData.tactical_checklist : [],
-      traps_to_avoid: Array.isArray(parsedData.traps_to_avoid) ? parsedData.traps_to_avoid : [],
-      offensive_strategy: Array.isArray(parsedData.offensive_strategy) ? parsedData.offensive_strategy : [],
-      defensive_strategy: Array.isArray(parsedData.defensive_strategy) ? parsedData.defensive_strategy : [],
-    };
-
-    console.log("=== PLANO EXTRAÍDO ===", plan);
+    const plan = JSON.parse(analysisText) as TacticalPlan;
 
     // Salvar no Supabase
     try {
-      const { error: dbError } = await supabase.from('matches').insert({
+      await supabase.from('matches').insert({
         user_id: user.id,
         my_team_description: input.myTeamDescription,
         opponents_description: input.opponentsDescription,
-        image_url: input.image ? "Análise com imagem realizada" : null,
-        tactical_plan: plan 
+        image_url: input.image ? "Imagem anexada na análise" : null,
+        tactical_plan: plan
       });
-
-      if (dbError) throw dbError;
-
     } catch (dbError) {
       console.error("Erro ao salvar no Supabase:", dbError);
     }
@@ -151,55 +123,6 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável, estritam
   } catch (error) {
     console.error("Erro ao gerar plano:", error);
     throw error;
-  }
-}
-
-export async function generatePanicTip(score: string, problem: string): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Usuário não autenticado.');
-
-  const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
-
-  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
-    return "Dica simulada: Jogue bolas altas no meio e respire fundo.";
-  }
-
-  const prompt = `
-SITUAÇÃO DE EMERGÊNCIA NO PADEL:
-Placar: ${score}
-Problema Principal: ${problem}
-
-Dê UMA ÚNICA dica tática crucial, curta e direta para virar o jogo AGORA.
-Máximo de 2 frases. Seja motivador mas técnico.
-  `;
-
-  try {
-    const response = await fetch('https://api.siliconflow.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-ai/DeepSeek-V3", 
-        messages: [
-          { role: "system", content: "Você é um técnico de Padel experiente focado em viradas de jogo." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.8
-      })
-    });
-
-    if (!response.ok) throw new Error('Erro na API');
-
-    const data = await response.json();
-    const tip = data.choices?.[0]?.message?.content;
-
-    return tip || "Mantenha a calma e foque em colocar a bola em jogo.";
-
-  } catch (error) {
-    console.error("Erro ao gerar dica de pânico:", error);
-    return "Erro ao conectar com o técnico. Respire e jogue simples.";
   }
 }
 

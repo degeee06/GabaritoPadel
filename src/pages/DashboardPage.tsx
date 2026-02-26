@@ -1,16 +1,16 @@
+
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { InstallPWAButton } from '../components/InstallPWAButton';
-import { BookOpen, Activity, Zap } from 'lucide-react';
+import { BookOpen, Activity } from 'lucide-react';
 
 interface DashboardPageProps {
   onStartAnalysis: () => void;
   onViewHistory: () => void;
   onViewGuide: () => void;
   onViewServeGuide: () => void;
-  onPanicMode: () => void;
 }
 
-export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide, onPanicMode }: DashboardPageProps) {
+export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide }: DashboardPageProps) {
   const { installPrompt, triggerInstall } = usePWAInstall();
   return (
     <div className="text-center py-10">
@@ -32,17 +32,7 @@ export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onV
         </button>
       </div>
 
-      <div className="mt-6">
-        <button 
-          onClick={onPanicMode}
-          className="w-full max-w-sm mx-auto bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 hover:text-red-300 font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 animate-pulse hover:animate-none"
-        >
-          <Zap className="w-5 h-5" />
-          MODO VIRADA (SOS)
-        </button>
-      </div>
-
-      <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+      <div className="mt-4 flex flex-col sm:flex-row justify-center gap-4">
         <button 
           onClick={onViewGuide}
           className="flex items-center justify-center gap-2 text-zinc-400 hover:text-white transition-colors py-2 px-4 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"

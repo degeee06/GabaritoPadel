@@ -128,7 +128,12 @@ export default function App() {
       case 'serve-guide':
         return <ServeGuide onBack={() => handleNavigation('dashboard')} />;
       case 'equipment':
-        return <EquipmentConsultant onBack={() => handleNavigation('dashboard')} />;
+        return <EquipmentConsultant 
+          onBack={() => handleNavigation('dashboard')} 
+          userProfile={userProfile}
+          onShowUpgrade={() => setShowUpgradeModal(true)}
+          onUsageComplete={fetchProfile}
+        />;
       default:
         return null;
     }

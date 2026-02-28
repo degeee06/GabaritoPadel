@@ -191,13 +191,25 @@ export async function generateEquipmentAdvice(description: string): Promise<stri
   }
 
   const prompt = `
-  CONSULTOR DE EQUIPAMENTO DE PADEL:
+  CONSULTOR DE EQUIPAMENTO DE PADEL (RESUMO PROFISSIONAL):
   Perfil do Jogador: ${description}
 
-  Com base nisso, sugira o equipamento ideal (Raquete: Formato, Espuma, Balanço; Tênis; Acessórios).
-  Explique o PORQUÊ de cada sugestão de forma técnica mas acessível.
-  Se o jogador mencionar dores (ex: cotovelo), priorize equipamentos que evitem lesões.
-  Use formatação Markdown para deixar a resposta bonita e legível.
+  Com base nisso, sugira o equipamento ideal de forma ULTRA RESUMIDA e TÉCNICA.
+  Não escreva parágrafos longos. Use tópicos diretos.
+
+  Estrutura Obrigatória:
+  ## 🎾 Raquete Ideal
+  *   **Formato:** [Ex: Diamante]
+  *   **Espuma:** [Ex: Soft EVA]
+  *   **Balanço:** [Ex: Alto]
+  *   **Por que:** [Explicação em 1 frase curta]
+
+  ## 👟 Tênis Recomendado
+  *   **Tipo de Solado:** [Ex: Clay/Espinha de Peixe]
+  *   **Foco:** [Ex: Estabilidade ou Leveza]
+
+  ## 💡 Dica Extra
+  *   [1 Dica curta sobre acessório ou prevenção de lesão, se aplicável]
   `;
 
   try {

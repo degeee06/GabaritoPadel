@@ -14,10 +14,11 @@ import { PositionGuide } from './components/PositionGuide';
 import { ServeGuide } from './components/ServeGuide';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PanicMode } from './components/PanicMode';
+import { EquipmentConsultant } from './pages/EquipmentConsultant';
 import { getUserProfile, incrementUsageCount } from './services/payment';
 import { usePWAInstall } from './hooks/usePWAInstall';
 
-type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide';
+type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide' | 'equipment';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -113,6 +114,7 @@ export default function App() {
           onViewHistory={() => handleNavigation('history')} 
           onViewGuide={() => handleNavigation('guide')}
           onViewServeGuide={() => handleNavigation('serve-guide')}
+          onViewEquipment={() => handleNavigation('equipment')}
           onPanicMode={() => setShowPanicMode(true)}
         />;
       case 'history':
@@ -125,6 +127,8 @@ export default function App() {
         return <PositionGuide onBack={() => handleNavigation('dashboard')} />;
       case 'serve-guide':
         return <ServeGuide onBack={() => handleNavigation('dashboard')} />;
+      case 'equipment':
+        return <EquipmentConsultant onBack={() => handleNavigation('dashboard')} />;
       default:
         return null;
     }

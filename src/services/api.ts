@@ -180,6 +180,51 @@ Máximo de 2 frases. Seja motivador mas técnico.
   }
 }
 
+export async function generateEquipmentAdvice(description: string): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    return "Sugestão simulada: Raquete formato Diamante, espuma dura. Tênis com solado Clay.";
+  }
+
+  const prompt = `
+  CONSULTOR DE EQUIPAMENTO DE PADEL:
+  Perfil do Jogador: ${description}
+
+  Com base nisso, sugira o equipamento ideal (Raquete: Formato, Espuma, Balanço; Tênis; Acessórios).
+  Explique o PORQUÊ de cada sugestão de forma técnica mas acessível.
+  Se o jogador mencionar dores (ex: cotovelo), priorize equipamentos que evitem lesões.
+  Use formatação Markdown para deixar a resposta bonita e legível.
+  `;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na API Gemini');
+
+    const data = await response.json();
+    const advice = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return advice || "Não foi possível gerar uma sugestão no momento.";
+
+  } catch (error) {
+    console.error("Erro ao gerar sugestão de equipamento:", error);
+    return "Erro ao conectar com o consultor. Tente novamente.";
+  }
+}
+
 export async function getMatchHistory(): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];

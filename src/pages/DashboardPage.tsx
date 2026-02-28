@@ -1,16 +1,17 @@
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { InstallPWAButton } from '../components/InstallPWAButton';
-import { BookOpen, Activity, Zap } from 'lucide-react';
+import { BookOpen, Activity, Zap, ShoppingBag } from 'lucide-react';
 
 interface DashboardPageProps {
   onStartAnalysis: () => void;
   onViewHistory: () => void;
   onViewGuide: () => void;
   onViewServeGuide: () => void;
+  onViewEquipment: () => void;
   onPanicMode: () => void;
 }
 
-export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide, onPanicMode }: DashboardPageProps) {
+export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide, onViewEquipment, onPanicMode }: DashboardPageProps) {
   const { installPrompt, triggerInstall } = usePWAInstall();
   return (
     <div className="text-center py-10">
@@ -42,7 +43,7 @@ export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onV
         </button>
       </div>
 
-      <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+      <div className="mt-8 flex flex-wrap justify-center gap-4">
         <button 
           onClick={onViewGuide}
           className="flex items-center justify-center gap-2 text-zinc-400 hover:text-white transition-colors py-2 px-4 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
@@ -56,6 +57,13 @@ export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onV
         >
           <Activity className="w-5 h-5" />
           Guia de Saques
+        </button>
+        <button 
+          onClick={onViewEquipment}
+          className="flex items-center justify-center gap-2 text-zinc-400 hover:text-white transition-colors py-2 px-4 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+        >
+          <ShoppingBag className="w-5 h-5" />
+          Consultor de Equipamento
         </button>
       </div>
 

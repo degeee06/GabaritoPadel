@@ -260,11 +260,11 @@ export async function analyzeTechnique(frames: string[], strokeType: string): Pr
   Seja direto. Aponte o erro principal e a correção.
   
   Formato Obrigatório (Markdown):
-  ### 🔍 Diagnóstico
+  ### 🔍 Diagnóstico Biomecânico
   *   **Ponto Forte:** [O que o jogador fez bem]
   *   **Erro Principal:** [O maior problema biomecânico detectado]
 
-  ### 🛠️ Correção (Drill)
+  ### 🛠️ Correção Prática (Drill)
   *   [Instrução prática para corrigir, ex: "Aponte o ombro esquerdo para a bola antes de bater"]
   
   ### 📊 Nota Técnica: [0-10]

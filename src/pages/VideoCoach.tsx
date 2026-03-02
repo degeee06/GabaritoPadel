@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { analyzeTechnique } from '../services/api';
 import { incrementUsageCount } from '../services/payment';
 import { extractFramesFromVideo } from '../lib/video';
+import { TextToSpeechButton } from '../components/TextToSpeechButton';
 import ReactMarkdown from 'react-markdown';
 
 interface VideoCoachProps {
@@ -174,6 +175,11 @@ export function VideoCoach({ onBack, userProfile, onShowUpgrade, onUsageComplete
           animate={{ opacity: 1 }}
           className="space-y-6"
         >
+          <div className="flex justify-between items-center bg-zinc-800/50 p-4 rounded-xl border border-zinc-700/50">
+            <h2 className="text-xl font-bold text-white">Análise Biomecânica</h2>
+            <TextToSpeechButton text={analysis} className="bg-zinc-700 hover:bg-lime-500 hover:text-zinc-900" />
+          </div>
+
           <div className="bg-zinc-800/50 border border-zinc-700/50 p-6 rounded-xl prose prose-invert prose-sm max-w-none prose-headings:text-lime-400 prose-strong:text-white">
             <ReactMarkdown>{analysis}</ReactMarkdown>
           </div>

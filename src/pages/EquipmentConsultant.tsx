@@ -3,6 +3,7 @@ import { ArrowLeft, ShoppingBag, Loader2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateEquipmentAdvice } from '../services/api';
 import { incrementUsageCount } from '../services/payment';
+import { TextToSpeechButton } from '../components/TextToSpeechButton';
 import ReactMarkdown from 'react-markdown';
 
 interface EquipmentConsultantProps {
@@ -102,6 +103,9 @@ export function EquipmentConsultant({ onBack, userProfile, onShowUpgrade, onUsag
           animate={{ opacity: 1 }}
           className="space-y-6"
         >
+          <div className="flex justify-end">
+            <TextToSpeechButton text={advice} />
+          </div>
           <div className="bg-zinc-800/50 border border-zinc-700/50 p-6 rounded-xl prose prose-invert prose-sm max-w-none prose-headings:text-lime-400 prose-strong:text-white">
             <ReactMarkdown>{advice}</ReactMarkdown>
           </div>

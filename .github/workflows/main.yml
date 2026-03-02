@@ -1,0 +1,17 @@
+name: Manter Supabase Vivo
+
+on:
+  schedule:
+    # Roda todo dia às 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Permite rodar manualmente
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acordar o Banco de Dados
+        run: |
+          curl -X GET '${{ secrets.SUPABASE_URL }}/rest/v1/?apikey=${{ secrets.SUPABASE_KEY }}' \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_KEY }}" \
+          -I

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, X, Zap, Loader2, Lock } from 'lucide-react';
 import { generatePanicTip } from '../services/api';
 import { incrementUsageCount } from '../services/payment';
+import { TextToSpeechButton } from './TextToSpeechButton';
 
 interface PanicModeProps {
   onClose: () => void;
@@ -106,7 +107,10 @@ export function PanicMode({ onClose, userProfile, onShowUpgrade, onUsageComplete
           </form>
         ) : (
           <div className="text-center space-y-6">
-            <div className="bg-zinc-800/50 p-6 rounded-lg border border-red-500/30">
+            <div className="bg-zinc-800/50 p-6 rounded-lg border border-red-500/30 relative">
+              <div className="absolute top-2 right-2">
+                <TextToSpeechButton text={tip} />
+              </div>
               <h3 className="text-red-400 text-sm font-bold uppercase mb-2">Instrução Tática Imediata</h3>
               <p className="text-2xl text-white font-bold leading-relaxed">{tip}</p>
             </div>

@@ -32,6 +32,7 @@ export function TextToSpeechButton({ text, className = '' }: TextToSpeechButtonP
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'pt-BR'; // Tenta forçar português do Brasil
+    utterance.rate = 1.2; // Aumenta um pouco a velocidade da leitura
     
     // Tenta encontrar uma voz em português
     const voices = window.speechSynthesis.getVoices();

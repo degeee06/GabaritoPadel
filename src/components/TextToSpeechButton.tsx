@@ -30,7 +30,15 @@ export function TextToSpeechButton({ text, className = '' }: TextToSpeechButtonP
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Limpa caracteres especiais do Markdown para leitura
+    const cleanText = text
+      .replace(/\*/g, '') // Remove asteriscos
+      .replace(/#/g, '')  // Remove hashtags
+      .replace(/-/g, '')  // Remove traços de lista
+      .replace(/\[.*?\]/g, '') // Remove colchetes e conteúdo interno se for metadado
+      .trim();
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'pt-BR'; // Tenta forçar português do Brasil
     utterance.rate = 1.2; // Aumenta um pouco a velocidade da leitura
     

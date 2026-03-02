@@ -21,10 +21,16 @@ export function EquipmentConsultant({ onBack, userProfile, onShowUpgrade, onUsag
     e.preventDefault();
     if (!description.trim()) return;
 
-    // Verificação de Limite (Plano Free)
-    if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
-      onShowUpgrade();
-      return;
+    // Verificação de Limite
+    if (userProfile) {
+      if (userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
+        onShowUpgrade();
+        return;
+      }
+      if (userProfile.plan === 'premium' && userProfile.usage_count >= 100) {
+        alert("Limite mensal de 100 consultas atingido.");
+        return;
+      }
     }
 
     setLoading(true);

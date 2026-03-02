@@ -44,10 +44,16 @@ export function VideoCoach({ onBack, userProfile, onShowUpgrade, onUsageComplete
     e.preventDefault();
     if (!videoFile) return;
 
-    // Verificação de Limite (Plano Free)
-    if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
-      onShowUpgrade();
-      return;
+    // Verificação de Limite
+    if (userProfile) {
+      if (userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
+        onShowUpgrade();
+        return;
+      }
+      if (userProfile.plan === 'premium' && userProfile.usage_count >= 100) {
+        alert("Limite mensal de 100 análises de vídeo atingido.");
+        return;
+      }
     }
 
     setLoading(true);

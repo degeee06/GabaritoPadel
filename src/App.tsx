@@ -81,10 +81,20 @@ export default function App() {
   };
 
   const handleFormSubmit = async (input: MatchInput) => {
-    if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
-      setShowUpgradeModal(true);
-      return;
+    // Verificação de Limites
+    if (userProfile) {
+      // Plano Free: Limite de 3
+      if (userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
+        setShowUpgradeModal(true);
+        return;
+      }
+      // Plano Premium: Limite de 100 (Segurança contra abuso)
+      if (userProfile.plan === 'premium' && userProfile.usage_count >= 100) {
+        alert("Você atingiu o limite de segurança de 100 análises mensais. Entre em contato com o suporte.");
+        return;
+      }
     }
+
     setLoading(true);
     setError(null);
     try {

@@ -237,6 +237,78 @@ export async function generateEquipmentAdvice(description: string): Promise<stri
   }
 }
 
+export async function analyzeTechnique(frames: string[], strokeType: string): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuário não autenticado.');
+
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+  if (!apiKey || apiKey.includes('PLACEHOLDER')) {
+    return "Análise simulada: O movimento parece fluido, mas tente flexionar mais os joelhos na preparação.";
+  }
+
+  const prompt = `
+  ATUE COMO UM TÉCNICO DE BIOMECÂNICA DE PADEL DE ELITE.
+  Analise esta sequência de quadros (frames) de um golpe de ${strokeType}.
+  
+  Identifique:
+  1. Preparação (Armação)
+  2. Ponto de Impacto
+  3. Terminação
+
+  Forneça um feedback TÉCNICO e CORRETIVO.
+  Seja direto. Aponte o erro principal e a correção.
+  
+  Formato Obrigatório (Markdown):
+  ### 🔍 Diagnóstico
+  *   **Ponto Forte:** [O que o jogador fez bem]
+  *   **Erro Principal:** [O maior problema biomecânico detectado]
+
+  ### 🛠️ Correção (Drill)
+  *   [Instrução prática para corrigir, ex: "Aponte o ombro esquerdo para a bola antes de bater"]
+  
+  ### 📊 Nota Técnica: [0-10]
+  `;
+
+  // Montar payload com texto + múltiplos frames
+  const parts: any[] = [{ text: prompt }];
+  
+  frames.forEach(frame => {
+    // frame é data:image/jpeg;base64,...
+    const base64Data = frame.split(',')[1];
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: base64Data
+      }
+    });
+  });
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.4
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na API Gemini');
+
+    const data = await response.json();
+    const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return analysis || "Não foi possível analisar o vídeo no momento.";
+
+  } catch (error) {
+    console.error("Erro ao analisar técnica:", error);
+    return "Erro ao processar o vídeo. Tente um vídeo mais curto ou com melhor iluminação.";
+  }
+}
+
 export async function getMatchHistory(): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];

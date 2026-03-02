@@ -15,10 +15,11 @@ import { ServeGuide } from './components/ServeGuide';
 import { UpgradeModal } from './components/UpgradeModal';
 import { PanicMode } from './components/PanicMode';
 import { EquipmentConsultant } from './pages/EquipmentConsultant';
+import { VideoCoach } from './pages/VideoCoach';
 import { getUserProfile, incrementUsageCount } from './services/payment';
 import { usePWAInstall } from './hooks/usePWAInstall';
 
-type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide' | 'equipment';
+type ViewState = 'dashboard' | 'history' | 'form' | 'result' | 'guide' | 'serve-guide' | 'equipment' | 'video-coach';
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -115,6 +116,7 @@ export default function App() {
           onViewGuide={() => handleNavigation('guide')}
           onViewServeGuide={() => handleNavigation('serve-guide')}
           onViewEquipment={() => handleNavigation('equipment')}
+          onViewVideoCoach={() => handleNavigation('video-coach')}
           onPanicMode={() => setShowPanicMode(true)}
         />;
       case 'history':
@@ -129,6 +131,13 @@ export default function App() {
         return <ServeGuide onBack={() => handleNavigation('dashboard')} />;
       case 'equipment':
         return <EquipmentConsultant 
+          onBack={() => handleNavigation('dashboard')} 
+          userProfile={userProfile}
+          onShowUpgrade={() => setShowUpgradeModal(true)}
+          onUsageComplete={fetchProfile}
+        />;
+      case 'video-coach':
+        return <VideoCoach 
           onBack={() => handleNavigation('dashboard')} 
           userProfile={userProfile}
           onShowUpgrade={() => setShowUpgradeModal(true)}
@@ -158,7 +167,15 @@ export default function App() {
       {renderContent()}
 
       {showPanicMode && (
-        <PanicMode onClose={() => setShowPanicMode(false)} />
+        <PanicMode 
+          onClose={() => setShowPanicMode(false)} 
+          userProfile={userProfile}
+          onShowUpgrade={() => {
+            setShowPanicMode(false);
+            setShowUpgradeModal(true);
+          }}
+          onUsageComplete={fetchProfile}
+        />
       )}
 
       {showUpgradeModal && (

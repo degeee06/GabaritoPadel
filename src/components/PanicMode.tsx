@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle, X, Zap, Loader2 } from 'lucide-react';
+import { AlertTriangle, X, Zap, Loader2, Lock } from 'lucide-react';
 import { generatePanicTip } from '../services/api';
+import { incrementUsageCount } from '../services/payment';
 
 interface PanicModeProps {
   onClose: () => void;
+  userProfile: { plan: string, usage_count: number } | null;
+  onShowUpgrade: () => void;
+  onUsageComplete: () => void;
 }
 
-export function PanicMode({ onClose }: PanicModeProps) {
+export function PanicMode({ onClose, userProfile, onShowUpgrade, onUsageComplete }: PanicModeProps) {
   const [score, setScore] = useState('');
   const [problem, setProblem] = useState('');
   const [tip, setTip] = useState<string | null>(null);
@@ -17,9 +21,17 @@ export function PanicMode({ onClose }: PanicModeProps) {
     e.preventDefault();
     if (!problem.trim()) return;
 
+    // Verificação de Limite (Plano Free)
+    if (userProfile && userProfile.plan !== 'premium' && userProfile.usage_count >= 3) {
+      onShowUpgrade();
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await generatePanicTip(score || "Não informado", problem);
+      await incrementUsageCount(); // Contabiliza como uso
+      onUsageComplete(); // Atualiza o perfil no App
       setTip(result);
     } catch (error) {
       setTip("Concentre-se em passar a bola. O erro é do adversário.");
@@ -43,9 +55,17 @@ export function PanicMode({ onClose }: PanicModeProps) {
           <X className="w-6 h-6" />
         </button>
 
-        <div className="flex items-center gap-3 mb-6 text-red-500">
-          <AlertTriangle className="w-8 h-8 animate-pulse" />
-          <h2 className="text-2xl font-bold uppercase tracking-wider">Modo Virada</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3 text-red-500">
+            <AlertTriangle className="w-8 h-8 animate-pulse" />
+            <h2 className="text-2xl font-bold uppercase tracking-wider">Modo Virada</h2>
+          </div>
+          {userProfile && userProfile.plan !== 'premium' && (
+            <div className="bg-zinc-800 px-3 py-1 rounded-full text-xs text-zinc-500 border border-zinc-700 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              {Math.max(0, 3 - userProfile.usage_count)} créditos
+            </div>
+          )}
         </div>
 
         {!tip ? (

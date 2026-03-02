@@ -1,6 +1,6 @@
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { InstallPWAButton } from '../components/InstallPWAButton';
-import { BookOpen, Activity, Zap, ShoppingBag } from 'lucide-react';
+import { BookOpen, Activity, Zap, ShoppingBag, Video } from 'lucide-react';
 
 interface DashboardPageProps {
   onStartAnalysis: () => void;
@@ -8,10 +8,11 @@ interface DashboardPageProps {
   onViewGuide: () => void;
   onViewServeGuide: () => void;
   onViewEquipment: () => void;
+  onViewVideoCoach: () => void;
   onPanicMode: () => void;
 }
 
-export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide, onViewEquipment, onPanicMode }: DashboardPageProps) {
+export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onViewServeGuide, onViewEquipment, onViewVideoCoach, onPanicMode }: DashboardPageProps) {
   const { installPrompt, triggerInstall } = usePWAInstall();
   return (
     <div className="text-center py-10">
@@ -64,6 +65,13 @@ export function DashboardPage({ onStartAnalysis, onViewHistory, onViewGuide, onV
         >
           <ShoppingBag className="w-5 h-5" />
           Consultor de Equipamento
+        </button>
+        <button 
+          onClick={onViewVideoCoach}
+          className="flex items-center justify-center gap-2 text-zinc-400 hover:text-white transition-colors py-2 px-4 rounded-lg hover:bg-zinc-800 border border-transparent hover:border-zinc-700"
+        >
+          <Video className="w-5 h-5" />
+          IA Video Coach
         </button>
       </div>
 

@@ -296,19 +296,28 @@ export async function analyzeTechnique(frames: string[], strokeType: string): Pr
       })
     });
 
-    if (!response.ok) throw new Error('Erro na API Gemini');
+
+    if (!response.ok) {
+      // Isso pega o motivo exato do erro que a API mandou
+      const errorText = await response.text();
+      throw new Error(`Status ${response.status} - ${errorText}`);
+    }
 
     const data = await response.json();
     const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     return analysis || "Não foi possível analisar o vídeo no momento.";
 
-  } catch (error) {
+  } catch (error: any) {
+    // 🚨 O ALERTA VAI FAZER O ERRO PULAR NA TELA DO CELULAR:
+    alert("ERRO REAL: " + (error.message || JSON.stringify(error)));
+    
     console.error("Erro ao analisar técnica:", error);
     return "Erro ao processar o vídeo. Tente um vídeo mais curto ou com melhor iluminação.";
   }
 }
 
+    
 export async function getMatchHistory(): Promise<any[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];

@@ -116,9 +116,7 @@ Gere um plano tático vencedor, direto ao ponto e altamente acionável.
 
     return plan;
 
-  } catch (error: any) {
-    // 🚨 ALERTA DA ANÁLISE DE PARTIDA
-    alert("ERRO ANÁLISE DE PARTIDA: " + (error.message || JSON.stringify(error)));
+  } catch (error) {
     console.error("Erro ao gerar plano:", error);
     throw error;
   }
@@ -140,14 +138,16 @@ export async function generatePanicTip(score: string, problem: string): Promise<
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } })
     });
 
-    if (!response.ok) throw new Error('Erro na API Gemini');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Status ${response.status} - ${errorText}`);
+    }
+
     const data = await response.json();
     const tip = data.candidates?.[0]?.content?.parts?.[0]?.text;
     return tip || "Mantenha a calma e foque em colocar a bola em jogo.";
 
-  } catch (error: any) {
-    // 🚨 ALERTA DO MODO PÂNICO
-    alert("ERRO MODO PÂNICO: " + (error.message || JSON.stringify(error)));
+  } catch (error) {
     console.error("Erro ao gerar dica de pânico:", error);
     return "Erro ao conectar com o técnico. Respire e jogue simples.";
   }
@@ -169,14 +169,16 @@ export async function generateEquipmentAdvice(description: string): Promise<stri
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } })
     });
 
-    if (!response.ok) throw new Error('Erro na API Gemini');
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Status ${response.status} - ${errorText}`);
+    }
+    
     const data = await response.json();
     const advice = data.candidates?.[0]?.content?.parts?.[0]?.text;
     return advice || "Não foi possível gerar uma sugestão no momento.";
 
-  } catch (error: any) {
-    // 🚨 ALERTA DO EQUIPAMENTO
-    alert("ERRO EQUIPAMENTO: " + (error.message || JSON.stringify(error)));
+  } catch (error) {
     console.error("Erro ao gerar sugestão de equipamento:", error);
     return "Erro ao conectar com o consultor. Tente novamente.";
   }
@@ -214,9 +216,7 @@ export async function analyzeTechnique(frames: string[], strokeType: string): Pr
     const analysis = data.candidates?.[0]?.content?.parts?.[0]?.text;
     return analysis || "Não foi possível analisar o vídeo no momento.";
 
-  } catch (error: any) {
-    // 🚨 ALERTA DO VÍDEO
-    alert("ERRO VÍDEO: " + (error.message || JSON.stringify(error)));
+  } catch (error) {
     console.error("Erro ao analisar técnica:", error);
     return "Erro ao processar o vídeo. Tente um vídeo mais curto ou com melhor iluminação.";
   }

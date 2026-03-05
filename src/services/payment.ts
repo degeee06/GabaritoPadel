@@ -94,6 +94,20 @@ export async function getUserProfile() {
     }
   }
 
+  // Lógica de Reset Diário do Plano Free (Forçando a Meia-Noite do Brasil UTC-3)
+  const today = new Date(new Date().getTime() - 3 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  if (data.last_usage_date !== today) {
+    // É um novo dia no Brasil! Reseta o contador para 0
+    await supabase
+      .from('profiles')
+      .update({ usage_count: 0, last_usage_date: today })
+      .eq('id', user.id);
+      
+    data.usage_count = 0;
+    data.last_usage_date = today;
+  }
+
   return data;
 }
 
